@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout
 from PyQt5.QtGui import QPalette
 from PyQt5.QtCore import Qt
 from PyQt5.QtMultimedia import QMediaPlayer
+from PyQt5.QtCore import Qt, QTimer
 
 from interface.media_player import MediaPlayer
 from interface.list_display import ListDisplay
@@ -68,6 +69,13 @@ class MainWindow(QMainWindow):
 
 		# Show the window
 		self.show()
+
+		# Make sure the main window can receive keyboard focus
+		self.setFocusPolicy(Qt.StrongFocus)
+
+		# Delay focus until after Qt finishes showing/layout
+		QTimer.singleShot(0, self._set_initial_focus)
+
 
 	def init_main_window(self):
 
@@ -137,13 +145,13 @@ class MainWindow(QMainWindow):
 			self.setFocus()
 
 		# Enter a new annotation
-		if event.key() == Qt.Key_Return:
+		if event.key() in (Qt.Key_Return, Qt.Key_Enter):
 			if self.media_player.play_button.isEnabled() and not self.media_player.media_player.state() == QMediaPlayer.PlayingState:	
 				self.event_window.set_position()
 				self.event_window.show()
 				self.event_window.setFocus()
 				self.event_window.list_widget.setFocus()
-			self.setFocus()
+			return
 
 		# Set the playback rate to normal
 		if event.key() == Qt.Key_F1 or event.key() == Qt.Key_A:
@@ -201,3 +209,9 @@ class MainWindow(QMainWindow):
 		ok = self.event_window.preselect_first_label(label)
 		if not ok:
 			self.event_window.list_widget.setFocus()
+
+	def _set_initial_focus(self):
+		# Prefer focusing the main window so keyPressEvent gets keys
+		self.setFocus()
+		# Also clear list selection so it doesn't steal attention
+		self.list_display.list_widget.setCurrentRow(-1)
