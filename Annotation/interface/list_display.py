@@ -27,11 +27,15 @@ class ListDisplay(QWidget):
 
 	def doubleClicked(self, item):
 		row = self.list_widget.currentRow()
-		position = self.main_window.list_manager.event_list[row].position
+		event = self.main_window.list_manager.event_list[row]
+		position = event.position
+
+		# Enter edit mode for this event
+		self.main_window._begin_edit_event(event)
+
 		if self.main_window.media_player.play_button.isEnabled():
 			self.main_window.media_player.set_position(position)
 		self.main_window.setFocus()
-
 
 	def display_list(self, list_to_display):
 		self.list_widget.clear()
