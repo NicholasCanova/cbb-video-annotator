@@ -1,8 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout
 from PyQt5.QtGui import QPalette
-from PyQt5.QtCore import Qt
-from PyQt5.QtMultimedia import QMediaPlayer
 from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtMultimedia import QMediaPlayer
 
 from interface.media_player import MediaPlayer
 from interface.list_display import ListDisplay
@@ -53,6 +52,8 @@ class MainWindow(QMainWindow):
 		self.frame_duration_ms = 40
 
 		self.half = 1
+		self.editing_event = False
+		self.edit_event_obj = None
 
 		# Defining some variables of the window
 		self.title_main_window = "Event Annotator"
@@ -106,10 +107,48 @@ class MainWindow(QMainWindow):
 		central_display.setLayout(final_layout)
 
 	def keyPressEvent(self, event):
-
 		ctrl = False
 
 		if self._handle_quick_label_hotkey(event):
+			return
+
+		# Edit-mode: Left/Right moves the locked event timestamp
+		if self.editing_event and event.key() in (Qt.Key_Left, Qt.Key_Right):
+			if not self.media_player.play_button.isEnabled():
+				return
+
+			if not self.edit_event_obj:
+				self._end_edit_event()
+				return
+
+			delta = -self.frame_duration_ms if event.key() == Qt.Key_Left else self.frame_duration_ms
+
+			# Optional modifiers: Shift=5 frames, Ctrl=10 frames
+			if event.modifiers() & Qt.ShiftModifier:
+				delta *= 5
+			if event.modifiers() & Qt.ControlModifier:
+				delta *= 10
+
+			old_pos = int(self.edit_event_obj.position)
+			new_pos = max(0, old_pos + int(delta))
+
+			# Update the object in-place, then resort list
+			self.edit_event_obj.position = new_pos
+			self.edit_event_obj.time = ms_to_time(new_pos)
+			self.list_manager.sort_list()
+
+			# Refresh UI + keep the edited event highlighted
+			self.list_display.display_list(self.list_manager.create_text_list())
+			try:
+				new_row = self.list_manager.event_list.index(self.edit_event_obj)
+				self.list_display.list_widget.setCurrentRow(new_row)
+			except ValueError:
+				pass
+
+			# Seek video to new timestamp (feedback)
+			self.media_player.set_position(new_pos)
+
+			self.setFocus()
 			return
 
 		# Remove an event with the delete key
@@ -144,14 +183,22 @@ class MainWindow(QMainWindow):
 					self.media_player.media_player.setPosition(position+self.frame_duration_ms)
 			self.setFocus()
 
-		# Enter a new annotation
+		# Enter: lock edited timestamp OR open new annotation
 		if event.key() in (Qt.Key_Return, Qt.Key_Enter):
-			if self.media_player.play_button.isEnabled() and not self.media_player.media_player.state() == QMediaPlayer.PlayingState:	
+			if self.editing_event:
+				if self.media_player.play_button.isEnabled():
+					path_label = self.media_player.get_last_label_file()
+					self.list_manager.save_file(path_label, self.half)
+				self._end_edit_event()
+				return
+
+			if self.media_player.play_button.isEnabled() and not self.media_player.media_player.state() == QMediaPlayer.PlayingState:
 				self.event_window.set_position()
 				self.event_window.show()
 				self.event_window.setFocus()
 				self.event_window.list_widget.setFocus()
 			return
+
 
 		# Set the playback rate to normal
 		if event.key() == Qt.Key_F1 or event.key() == Qt.Key_A:
@@ -215,3 +262,17 @@ class MainWindow(QMainWindow):
 		self.setFocus()
 		# Also clear list selection so it doesn't steal attention
 		self.list_display.list_widget.setCurrentRow(-1)
+
+	def _begin_edit_event(self, event_obj):
+		self.editing_event = True
+		self.edit_event_obj = event_obj
+		# Optional: ensure paused while editing
+		# if self.media_player.media_player.state() == QMediaPlayer.PlayingState:
+		# 	self.media_player.play_video()
+
+	def _end_edit_event(self):
+		self.editing_event = False
+		self.edit_event_obj = None
+		# Clear list selection so arrows go back to scrubbing
+		self.list_display.list_widget.setCurrentRow(-1)
+		self.setFocus()

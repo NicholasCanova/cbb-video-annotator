@@ -1,4 +1,4 @@
-from utils.event_class import Event
+from utils.event_class import Event, ms_to_time
 import json
 import os
 
@@ -31,6 +31,33 @@ class ListManager:
 
 		self.event_list.append(event)
 		self.sort_list()
+
+	def get_event(self, index):
+		if index is None:
+			return None
+		if index < 0 or index >= len(self.event_list):
+			return None
+		return self.event_list[index]
+
+	def update_event_position(self, index, new_position_ms):
+		event = self.get_event(index)
+		if not event:
+			return False, None
+
+		new_position_ms = max(0, int(new_position_ms))
+		event.position = new_position_ms
+		event.time = ms_to_time(new_position_ms)
+
+		self.sort_list()
+
+		# After sorting, re-find the SAME object so the UI can keep editing it
+		try:
+			new_index = self.event_list.index(event)
+		except ValueError:
+			new_index = None
+
+		return True, new_index
+
 
 	def sort_list(self):
 
