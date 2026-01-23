@@ -126,6 +126,7 @@ class EventSelectionWindow(QMainWindow):
 				self.list_widget_third.setCurrentRow(-1)
 				self.main_window.setFocus()
 
+		# Move back a column in the selection with backspace
 		if event.key() == Qt.Key_Backspace:
 			self._step_back_selection()
 
