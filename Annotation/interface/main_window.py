@@ -10,6 +10,36 @@ from utils.list_management import ListManager
 from utils.event_class import Event, ms_to_time
 
 class MainWindow(QMainWindow):
+	QUICK_LABEL_HOTKEYS = {
+		Qt.Key_1: "Drive",
+		Qt.Key_2: "On Ball Screen",
+		Qt.Key_3: "Dribble Handoff",
+		Qt.Key_4: "Fake Handoff",
+		Qt.Key_5: "Off Ball Screen",
+		Qt.Key_6: "Post Up",
+		Qt.Key_7: "Spot Up",
+		Qt.Key_8: "Isolation",
+		Qt.Key_9: "Cut",
+		Qt.Key_0: "Screener Rolling to Rim",
+		Qt.Key_Minus: "Screener Popping to 3P Line",
+		Qt.Key_Equal: "Screener Slipping the Screen",
+		Qt.Key_Q: "Defenders Double Team",
+		Qt.Key_W: "Defenders Switch",
+		Qt.Key_R: "Ballhandler Defender Over Screen",
+		Qt.Key_T: "Ballhandler Defender Under Screen",
+		Qt.Key_Y: "Roller Defender Up on Screen",
+		Qt.Key_U: "Roller Defender Dropping",
+		Qt.Key_I: "Roller Defender Hedging",
+		Qt.Key_J: "2P Shot",
+		Qt.Key_K: "3P Shot",
+		Qt.Key_B: "Made Shot",
+		Qt.Key_C: "Blocked Shot",
+		Qt.Key_V: "Rebound",
+		Qt.Key_N: "Turnover with Steal",
+		Qt.Key_M: "Turnover without Steal",
+		Qt.Key_L: "Foul Committed",
+		Qt.Key_P: "Pass",
+	}
 	def __init__(self):
 		super().__init__()
 
@@ -70,6 +100,9 @@ class MainWindow(QMainWindow):
 	def keyPressEvent(self, event):
 
 		ctrl = False
+
+		if self._handle_quick_label_hotkey(event):
+			return
 
 		# Remove an event with the delete key
 		if event.key() == Qt.Key_Delete or event.key() == Qt.Key_Backspace:
@@ -137,10 +170,34 @@ class MainWindow(QMainWindow):
 			self.list_display.list_widget.setCurrentRow(-1)
 			self.setFocus()
 
-		if event.modifiers() and Qt.ControlModifier:
+		if event.modifiers() & Qt.ControlModifier:
 			ctrl = True
 
 		if event.key() == Qt.Key_S and ctrl:
 			if self.media_player.play_button.isEnabled():
 				path_label = self.media_player.get_last_label_file()
 				self.list_manager.save_file(path_label, self.half)
+
+	def _handle_quick_label_hotkey(self, event):
+		if event.modifiers() != Qt.NoModifier:
+			return False
+		label = self.QUICK_LABEL_HOTKEYS.get(event.key())
+		if not label:
+			return False
+
+		self._open_event_window_with_label(label)
+		return True
+
+	def _open_event_window_with_label(self, label: str):
+		if not self.media_player.play_button.isEnabled():
+			return
+		if self.media_player.media_player.state() == QMediaPlayer.PlayingState:
+			return
+
+		self.event_window.set_position()
+		self.event_window.show()
+		self.event_window.setFocus()
+
+		ok = self.event_window.preselect_first_label(label)
+		if not ok:
+			self.event_window.list_widget.setFocus()
