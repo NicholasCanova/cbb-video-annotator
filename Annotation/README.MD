@@ -1,37 +1,42 @@
-# Annotation and Visualization Tools
+# Annotation and Visualization Tools (Fork)
 
-This folder contains the tools used to annotate the actionsof SoccerNet-v2.
-These tools can also be used to visualize the action spotting annotations on the videos.
+This repository is a fork of the SoccerNet-v2 Annotation and Visualization Tools
+(https://github.com/SoccerNet/sn-spotting/tree/main)
+
+The original tool was developed by researchers at:
+* University of Liège (ULiège)
+* King Abdullah University of Science and Technology (KAUST)
+* Aalborg University (AAU)
+
+This fork has been modified for a different annotation workflow and dataset
+and is not affiliated with or maintained by the original authors.
+
+## Changes in This Fork
+* Updated environment setup (Python 3.8, venv instead of conda)
+* Removed SoccerNet dataset dependency
+* Added fast keyboard-driven annotation workflow
+* Added event time adjustment and visualization improvements
+* Modified label handling and output format
+
 
 ## Getting Started
 
-The following instructions will help you install the required libraries and the dataset to run the tools. The code runs in <code>python 3</code> and was tested in a conda environment.
+The following instructions will help you install the required libraries and the dataset to run the tools. The code runs in <code>python 3.8</code> .
 
 ### Create environment
 
-To create and setup the conda environment, simply follow these steps:
+To create and setup the virtual environment, simply follow these steps:
 
 ```bash
-conda create -n annotation python=3.8
-conda activate annotation
+# create a virtual environment using python 3.8
+pyenv versions
+pyenv local 3.8.19
+python3.8 --version
+python3.8 -m venv venv
+source venv/bin/activate
+#deactivate  # to deactivate the venv each time when done
 pip install --upgrade pip
 pip install pyqt5
-```
-
-### Install the SoccerNet-v2 videos and labels
-
-You will need the LQ videos, the action labels and the camera labels. The following steps help you install them. Note that in order to download the videos, you will need to sign a NDA to get the password on the [SoccerNet website](https://soccer-net.org/).
-
-```bash
-pip install SoccerNet
-python
->> from SoccerNet.Downloader import SoccerNetDownloader
->> mySoccerNetDownloader = SoccerNetDownloader(LocalDirectory="/path/to/soccernet")
-
->> mySoccerNetDownloader.downloadGames(files=["Labels-v2.json"], split=["train","valid","test"]) # download labels SN v2
-
->> mySoccerNetDownloader.password = input("Password for videos? (contact the author):\n")
->> mySoccerNetDownloader.downloadGames(files=["1.mkv", "2.mkv"], split=["train","valid","test"]) # download LQ Video
 ```
 
 ## Run the tools
@@ -46,7 +51,7 @@ python main.py
 
 ### Start the visualization
 
-To start the visualization, click on the open video button at the bottom left of the annotator and select a low-quality video from the SoccerNet dataset (named 1.mkv or 2.mkv). The labels-v2.json (for actions) should be placed in the same folder as the video (done automatically when downloading them from the SoccerNet pip package).
+To start the visualization, click on the open video button at the bottom left of the annotator and select a video from the dataset (named 1.mkv or 2.mkv). The labels-v2.json (for actions) should be placed in the same folder as the video. A sample video and annotation file is placed in the "example video" folder.
 
 Once the video is opened, you can easily navigate through it either using the time bar at the bottom or by double-clicking on the annotations in the right column. You can also navigate in the video frame by frame using the left and right arrow keys, or speed up the video using A (x1) Z (x2) E (x4) and pause or re-start the video with the SPACEBAR.
 
@@ -56,31 +61,7 @@ To annotate a new action, go to the exact frame you want to annotate, press ENTE
 
 To delete an annotation, double-click on it in the right column and press DELETE. 
 
-Be aware that these actions will overwrite the original annotations of SoccerNet and might thus change the performances of methods. To make sure you have the correct annotations when evaluating your method, either work on a copy of the dataset or re-download the annotations directly from the pip package in a new folder.
-
-
-## Authors
-
-* **Anthony Cioppa**, University of Liège (ULiège).
-* **Adrien Deliège**, University of Liège (ULiège).
-* **Silvio Giancola**, King Abdullah University of Science and Technology (KAUST).
-* **Meisam J. Seikavandi**,  Aalborg University (AAU).
-* **Jacob V. Dueholm**,  Aalborg University (AAU).
-
-See the [AUTHORS](AUTHORS) file for details.
-
-
 ## License
 
 Apache v2.0
 See the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-* Anthony Cioppa is funded by the FRIA, Belgium.
-* This work is supported by the DeepSport project of the Walloon Region, at the University of Liège (ULiège), Belgium.
-* This work is also supported by the King Abdullah University of Science and Technology (KAUST) Office of Sponsored Research (OSR).
-* This work is also supported by the Milestone Research Program at Aalborg University.
-
-
-
