@@ -1,0 +1,73 @@
+{
+    "UrlLocal": "england_epl/2014-2015/2015-02-21 - 18-00 Chelsea 1 - 1 Burnley/",
+    "UrlYoutube": "",
+    "annotations": [
+        {
+            "gameTime": "1 - 00:03",
+            "label": "Dribble",
+            "position": "3888",
+            "team": "home",
+            "visibility": "visible"
+        },
+        {
+            "gameTime": "1 - 00:04",
+            "label": "Pass",
+            "position": "4477",
+            "team": "not applicable",
+            "visibility": "not applicable"
+        },
+        {
+            "gameTime": "1 - 00:04",
+            "label": "Pass",
+            "position": "4477",
+            "team": "home",
+            "visibility": "visible"
+        },
+        {
+            "gameTime": "1 - 00:04",
+            "label": "Pass",
+            "position": "4477",
+            "team": "away",
+            "visibility": "visible"
+        },
+        {
+            "gameTime": "1 - 00:04",
+            "label": "Pass",
+            "position": "4482",
+            "team": "home",
+            "visibility": "visible"
+        },
+        {
+            "gameTime": "1 - 00:04",
+            "label": "Pass",
+            "position": "4664",
+            "team": "home",
+            "visibility": "visible"
+        },
+        {
+            "gameTime": "1 - 00:05",
+            "label": "2-point shot",
+            "position": "5637",
+            "team": "home",
+            "visibility": "visible"
+        },
+        {
+            "gameTime": "1 - 00:06",
+            "label": "Pass",
+            "position": "6200",
+            "team": "home",
+            "visibility": "visible"
+        },
+        {
+            "gameTime": "1 - 00:06",
+            "label": "Pass",
+            "position": "6200",
+            "team": "away",
+            "visibility": "visible"
+        }
+    ],
+    "gameAwayTeam": "Buffalo",
+    "gameDate": "21/02/2015 - 18:00",
+    "gameHomeTeam": "West Virginia",
+    "gameScore": "1 - 1"
+}
