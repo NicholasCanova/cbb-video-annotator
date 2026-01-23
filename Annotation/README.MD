@@ -61,6 +61,38 @@ To annotate a new action, go to the exact frame you want to annotate, press ENTE
 
 To delete an annotation, double-click on it in the right column and press DELETE. 
 
+#### Hot Keys
+Hot key usage: go to the exact frame you want to annotate, and press the key associated with the action
+Temporary hotkeys:
+1: "Drive",
+2: "On Ball Screen",
+3: "Dribble Handoff",
+4: "Fake Handoff",
+5: "Off Ball Screen",
+6: "Post Up",
+7: "Spot Up",
+8: "Isolation",
+9: "Cut",
+0: "Screener Rolling to Rim",
+Minus: "Screener Popping to 3P Line",
+Equal: "Screener Slipping the Screen",
+Q: "Defenders Double Team",
+W: "Defenders Switch",
+R: "Ballhandler Defender Over Screen",
+T: "Ballhandler Defender Under Screen",
+Y: "Roller Defender Up on Screen",
+U: "Roller Defender Dropping",
+I: "Roller Defender Hedging",
+J: "2P Shot",
+K: "3P Shot",
+B: "Made Shot",
+C: "Blocked Shot",
+V: "Rebound",
+N: "Turnover with Steal",
+M: "Turnover without Steal",
+L: "Foul Committed",
+P: "Pass",
+
 ## License
 
 Apache v2.0

@@ -1,18 +1,28 @@
-Penalty
-Kick-off
-Goal
-Substitution
-Offside
-Shots on target
-Shots off target
-Clearance
-Ball out of play
-Throw-in
-Foul
-Indirect free-kick
-Direct free-kick
-Corner
-Yellow card
-Red card
-Yellow->red card
-I don't know
+Drive
+On Ball Screen
+Dribble Handoff
+Fake Handoff
+Off Ball Screen
+Post Up
+Spot Up
+Isolation
+Cut
+Screener Rolling to Rim
+Screener Popping to 3P Line
+Screener Slipping the Screen
+Defenders Double Team
+Defenders Switch
+Ballhandler Defender Over Screen
+Ballhandler Defender Under Screen
+Roller Defender Up on Screen
+Roller Defender Dropping
+Roller Defender Hedging
+2P Shot
+3P Shot
+Made Shot
+Blocked Shot
+Rebound
+Turnover with Steal
+Turnover without Steal
+Foul Committed
+Pass
