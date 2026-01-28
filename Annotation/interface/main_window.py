@@ -49,7 +49,9 @@ class MainWindow(QMainWindow):
 		self.width_main_window = 1920 
 		self.height_main_window = 1080
 
-		self.frame_duration_ms = 40
+		self.default_frame_duration_ms = 40.0
+		self.frame_duration_ms = self.default_frame_duration_ms
+		self.video_frame_rate = None
 
 		self.half = 1
 		self.editing_event = False
@@ -121,13 +123,8 @@ class MainWindow(QMainWindow):
 				self._end_edit_event()
 				return
 
-			delta = -self.frame_duration_ms if event.key() == Qt.Key_Left else self.frame_duration_ms
-
-			# Optional modifiers: Shift=5 frames, Ctrl=10 frames
-			if event.modifiers() & Qt.ShiftModifier:
-				delta *= 5
-			if event.modifiers() & Qt.ControlModifier:
-				delta *= 10
+			step_ms = self._frame_step_ms_with_modifiers(event)
+			delta = -step_ms if event.key() == Qt.Key_Left else step_ms
 
 			old_pos = int(self.edit_event_obj.position)
 			new_pos = max(0, old_pos + int(delta))
@@ -135,6 +132,7 @@ class MainWindow(QMainWindow):
 			# Update the object in-place, then resort list
 			self.edit_event_obj.position = new_pos
 			self.edit_event_obj.time = ms_to_time(new_pos)
+			self.edit_event_obj.frame = self.position_to_frame(new_pos)
 			self.list_manager.sort_list()
 
 			# Refresh UI + keep the edited event highlighted
@@ -171,20 +169,23 @@ class MainWindow(QMainWindow):
 		if event.key() == Qt.Key_Left:
 			if self.media_player.play_button.isEnabled():
 				position = self.media_player.media_player.position()
-				if position > self.frame_duration_ms:
-					self.media_player.media_player.setPosition(position-self.frame_duration_ms)
+				step = self._frame_step_ms_with_modifiers(event)
+				if position > step:
+					self.media_player.media_player.setPosition(position - step)
 			self.setFocus()
 		
 		if event.key() == Qt.Key_Right:
 			if self.media_player.play_button.isEnabled():
 				position = self.media_player.media_player.position()
 				duration = self.media_player.media_player.duration()
-				if position < duration - self.frame_duration_ms:
-					self.media_player.media_player.setPosition(position+self.frame_duration_ms)
+				step = self._frame_step_ms_with_modifiers(event)
+				if position < duration - step:
+					self.media_player.media_player.setPosition(position + step)
 			self.setFocus()
 
 		# Enter: lock edited timestamp OR open new annotation
 		if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+			# Enter in edit mode: save and exit edit mode
 			if self.editing_event:
 				if self.media_player.play_button.isEnabled():
 					path_label = self.media_player.get_last_label_file()
@@ -192,6 +193,7 @@ class MainWindow(QMainWindow):
 				self._end_edit_event()
 				return
 
+			# Enter when not editing: open new annotation
 			if self.media_player.play_button.isEnabled() and not self.media_player.media_player.state() == QMediaPlayer.PlayingState:
 				self.event_window.set_position()
 				self.event_window.show()
@@ -243,6 +245,32 @@ class MainWindow(QMainWindow):
 		self._open_event_window_with_label(label)
 		return True
 
+	def set_frame_rate(self, frame_rate):
+		try:
+			rate = float(frame_rate)
+		except (TypeError, ValueError):
+			rate = None
+
+		if rate and rate > 0:
+			self.video_frame_rate = rate
+			self.frame_duration_ms = 1000.0 / rate
+		else:
+			self.video_frame_rate = None
+			self.frame_duration_ms = self.default_frame_duration_ms
+
+	def _frame_step_ms_with_modifiers(self, event):
+		multiplier = 1
+		if event.modifiers() & Qt.ShiftModifier:
+			multiplier *= 5
+		if event.modifiers() & Qt.ControlModifier:
+			multiplier *= 10
+		return max(1, int(round(self.frame_duration_ms * multiplier)))
+
+	def position_to_frame(self, position_ms):
+		frame_duration_ms = self.frame_duration_ms if self.frame_duration_ms else self.default_frame_duration_ms
+		frame_duration_ms = max(frame_duration_ms, 0.001)
+		return max(0, int(round(position_ms / frame_duration_ms)))
+
 	def _open_event_window_with_label(self, label: str):
 		if not self.media_player.play_button.isEnabled():
 			return
@@ -266,15 +294,16 @@ class MainWindow(QMainWindow):
 	def _begin_edit_event(self, event_obj):
 		self.editing_event = True
 		self.edit_event_obj = event_obj
-		# Optional: ensure paused while editing
-		# if self.media_player.media_player.state() == QMediaPlayer.PlayingState:
-		# 	self.media_player.play_video()
+		# Update overlay to show editing mode
+		self.media_player.update_overlay()
 
 	def _end_edit_event(self):
 		self.editing_event = False
 		self.edit_event_obj = None
 		# Clear list selection so arrows go back to scrubbing
 		self.list_display.list_widget.setCurrentRow(-1)
+		# Update overlay to show normal mode
+		self.media_player.update_overlay()
 		self.setFocus()
 
 	def closeEvent(self, event):

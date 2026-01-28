@@ -107,7 +107,15 @@ class ListManager:
 					tmp_visibility = "default"
 					if "visibility" in event:
 						tmp_visibility = event["visibility"]
-					event_list.append(Event(tmp_label, tmp_half, tmp_time, tmp_team, tmp_position, tmp_visibility))
+					tmp_frame = None
+					if "frame" in event:
+						try:
+							tmp_frame = int(event["frame"])
+						except (TypeError, ValueError):
+							tmp_frame = None
+					if tmp_frame is None:
+						tmp_frame = int(tmp_position // 40) if tmp_position >= 0 else 0
+					event_list.append(Event(tmp_label, tmp_half, tmp_time, tmp_team, tmp_position, tmp_visibility, tmp_frame))
 		return event_list
 
 	def save_file(self, path, half):
@@ -130,6 +138,7 @@ class ListManager:
 			tmp_dict["team"] = str(event.team)
 			tmp_dict["visibility"] = str(event.visibility)
 			tmp_dict["position"] = str(event.position)
+			tmp_dict["frame"] = str(event.frame)
 			annotations_dictionary.append(tmp_dict)
 
 		data = None

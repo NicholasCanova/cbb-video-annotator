@@ -18,14 +18,10 @@ class ListDisplay(QWidget):
 
 		self.list_widget = QListWidget()
 		self.list_widget.clicked.connect(self.clicked)
-		self.list_widget.itemDoubleClicked.connect(self.doubleClicked)
 
 		self.layout.addWidget(self.list_widget)
 
 	def clicked(self, qmodelindex):
-		item = self.list_widget.currentItem()
-
-	def doubleClicked(self, item):
 		row = self.list_widget.currentRow()
 		event = self.main_window.list_manager.event_list[row]
 		position = event.position
@@ -33,8 +29,8 @@ class ListDisplay(QWidget):
 		# Enter edit mode for this event
 		self.main_window._begin_edit_event(event)
 
-		if self.main_window.media_player.play_button.isEnabled():
-			self.main_window.media_player.set_position(position)
+		self.main_window.media_player.media_player.pause()
+		self.main_window.media_player.set_position(position)
 		self.main_window.setFocus()
 
 	def display_list(self, list_to_display):
