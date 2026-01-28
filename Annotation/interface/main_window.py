@@ -185,6 +185,7 @@ class MainWindow(QMainWindow):
 
 		# Enter: lock edited timestamp OR open new annotation
 		if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+			# Enter in edit mode: save and exit edit mode
 			if self.editing_event:
 				if self.media_player.play_button.isEnabled():
 					path_label = self.media_player.get_last_label_file()
@@ -192,6 +193,7 @@ class MainWindow(QMainWindow):
 				self._end_edit_event()
 				return
 
+			# Enter when not editing: open new annotation
 			if self.media_player.play_button.isEnabled() and not self.media_player.media_player.state() == QMediaPlayer.PlayingState:
 				self.event_window.set_position()
 				self.event_window.show()
@@ -266,15 +268,16 @@ class MainWindow(QMainWindow):
 	def _begin_edit_event(self, event_obj):
 		self.editing_event = True
 		self.edit_event_obj = event_obj
-		# Optional: ensure paused while editing
-		# if self.media_player.media_player.state() == QMediaPlayer.PlayingState:
-		# 	self.media_player.play_video()
+		# Update overlay to show editing mode
+		self.media_player.update_overlay()
 
 	def _end_edit_event(self):
 		self.editing_event = False
 		self.edit_event_obj = None
 		# Clear list selection so arrows go back to scrubbing
 		self.list_display.list_widget.setCurrentRow(-1)
+		# Update overlay to show normal mode
+		self.media_player.update_overlay()
 		self.setFocus()
 
 	def closeEvent(self, event):
