@@ -276,3 +276,8 @@ class MainWindow(QMainWindow):
 		# Clear list selection so arrows go back to scrubbing
 		self.list_display.list_widget.setCurrentRow(-1)
 		self.setFocus()
+
+	def closeEvent(self, event):
+		# Clean up media player before closing
+		self.media_player.cleanup()
+		event.accept()

@@ -119,3 +119,12 @@ class MediaPlayer(QWidget):
 	def handle_errors(self):
 		self.play_button.setEnabled(False)
 		print("Error: " + self.media_player.errorString())
+
+	def cleanup(self):
+		# clean up media player resources to prevent segfaults
+		self.media_player.stop()
+		self.media_player.setMedia(QMediaContent())
+		self.media_player.stateChanged.disconnect()
+		self.media_player.positionChanged.disconnect()
+		self.media_player.durationChanged.disconnect()
+
