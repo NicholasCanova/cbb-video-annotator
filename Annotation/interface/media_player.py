@@ -16,6 +16,7 @@ class MediaPlayer(QWidget):
 
 		# Media Player
 		self.media_player = QMediaPlayer(None, QMediaPlayer.VideoSurface)
+		self.media_player.setNotifyInterval(33)
 
 		# Video Widget
 		self.video_widget = QVideoWidget()
