@@ -138,9 +138,7 @@ class EventSelectionWindow(QMainWindow):
 				self.main_window.position_to_frame(position)
 			))
 
-			self.main_window.list_display.display_list(
-				self.main_window.list_manager.create_text_list()
-			)
+			self.main_window.list_display.display_list()
 
 			path_label = self.main_window.media_player.get_last_label_file()
 			self.main_window.list_manager.save_file(path_label, self.main_window.half)

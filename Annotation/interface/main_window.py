@@ -87,15 +87,14 @@ class MainWindow(QMainWindow):
 		video_display = QWidget(self)
 		video_display.setLayout(self.media_player.layout)
 
+		# Create the list manager and corresponding display
+		self.list_manager = ListManager()
+		self.list_display = ListDisplay(self)
+
 		# Create the Event selection Window
 		self.event_window = EventSelectionWindow(self)
 
-		# Add the list
-		self.list_display = ListDisplay(self)
-
-		# Create the original list of labels
-		self.list_manager = ListManager()
-		self.list_display.display_list(self.list_manager.create_text_list())
+		self.list_display.display_list()
 
 
 		# Layout the different widgets
@@ -136,7 +135,7 @@ class MainWindow(QMainWindow):
 			self.list_manager.sort_list()
 
 			# Refresh UI + keep the edited event highlighted
-			self.list_display.display_list(self.list_manager.create_text_list())
+			self.list_display.display_list()
 			try:
 				new_row = self.list_manager.event_list.index(self.edit_event_obj)
 				self.list_display.list_widget.setCurrentRow(new_row)
@@ -154,7 +153,7 @@ class MainWindow(QMainWindow):
 			index = self.list_display.list_widget.currentRow()
 			if index >= 0:
 				self.list_manager.delete_event(index)
-				self.list_display.display_list(self.list_manager.create_text_list())
+				self.list_display.display_list()
 				path_label = self.media_player.get_last_label_file()
 				self.list_manager.save_file(path_label, self.half)
 			self.setFocus()
@@ -297,14 +296,15 @@ class MainWindow(QMainWindow):
 		# Update overlay to show editing mode
 		self.media_player.update_overlay()
 
-	def _end_edit_event(self):
+	def _end_edit_event(self, keep_focus=False):
 		self.editing_event = False
 		self.edit_event_obj = None
 		# Clear list selection so arrows go back to scrubbing
 		self.list_display.list_widget.setCurrentRow(-1)
 		# Update overlay to show normal mode
 		self.media_player.update_overlay()
-		self.setFocus()
+		if not keep_focus:
+			self.setFocus()
 
 	def closeEvent(self, event):
 		# Clean up media player before closing

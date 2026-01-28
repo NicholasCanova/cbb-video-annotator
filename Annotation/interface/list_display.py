@@ -1,7 +1,6 @@
-from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QGridLayout, QListWidget
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
-from PyQt5.QtMultimediaWidgets import QVideoWidget
-from PyQt5.QtCore import Qt, QUrl
+from PyQt5.QtWidgets import QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QListWidget, QLineEdit, QCompleter, QApplication
+from PyQt5.QtCore import Qt, QStringListModel, QEvent
+
 
 class ListDisplay(QWidget):
 
@@ -13,27 +12,198 @@ class ListDisplay(QWidget):
 
 		self.main_window = main_window
 
-		self.layout = QGridLayout()
+		# Filter state:
+		self._typed_text = ""
+		self._committed_action = ""
+		self._visible_events = []
+
+		# Completer model (action types only)
+		self._actions_model = QStringListModel()
+		self._completer = QCompleter(self._actions_model, self)
+		self._completer.setCaseSensitivity(Qt.CaseInsensitive)
+
+		# PopupCompletion: show dropdown (no inline completion in the line edit)
+		# MatchStartsWith: "p" keeps only items that start with p
+		self._completer.setCompletionMode(QCompleter.PopupCompletion)
+		self._completer.setFilterMode(Qt.MatchStartsWith)
+
+		# When user picks from dropdown (mouse or Enter while popup focus), commit
+		self._completer.activated.connect(self._commit_action_from_dropdown)
+
+		# Layout
+		self.layout = QVBoxLayout()
 		self.setLayout(self.layout)
 
-		self.list_widget = QListWidget()
-		self.list_widget.clicked.connect(self.clicked)
+		self._filter_layout = QHBoxLayout()
 
+		# Create and configure the search/filter input box for action filtering
+		self.search_input = QLineEdit()
+		self.search_input.setPlaceholderText("Filter actions")
+		self.search_input.setCompleter(self._completer)
+		self.search_input.installEventFilter(self)
+		self.search_input.textEdited.connect(self._on_search_text_edited)
+		self.search_input.returnPressed.connect(self._commit_from_enter)
+
+		self.clear_filter_button = QPushButton("Clear")
+		self.clear_filter_button.clicked.connect(self._clear_filter)
+
+		self._filter_layout.addWidget(self.search_input)
+		self._filter_layout.addWidget(self.clear_filter_button)
+		self.layout.addLayout(self._filter_layout)
+
+		# Event list
+		self.list_widget = QListWidget()
+		self.list_widget.setSelectionMode(QListWidget.SingleSelection)
+
+		self.list_widget.clicked.connect(self._on_event_clicked)
 		self.layout.addWidget(self.list_widget)
 
-	def clicked(self, qmodelindex):
-		row = self.list_widget.currentRow()
-		event = self.main_window.list_manager.event_list[row]
-		position = event.position
+	def _on_event_clicked(self, model_index):
+		row = model_index.row()
+		if row >= 0:
+			self._activate_row(row)
 
-		# Enter edit mode for this event
+	def _activate_row(self, row):
+		if row < 0 or row >= len(self._visible_events):
+			return
+
+		self.list_widget.setCurrentRow(row)
+		event = self._visible_events[row]
+
 		self.main_window._begin_edit_event(event)
-
 		self.main_window.media_player.media_player.pause()
-		self.main_window.media_player.set_position(position)
+		self.main_window.media_player.set_position(event.position)
 		self.main_window.setFocus()
 
-	def display_list(self, list_to_display):
+	def display_list(self, events=None):
+		if events is None:
+			events = list(
+				getattr(self.main_window, "list_manager", None).event_list
+				if getattr(self.main_window, "list_manager", None)
+				else []
+			)
+		self._visible_events = self._filter_events(events)
+
 		self.list_widget.clear()
-		for item_nbr, element in enumerate(list_to_display):
-			self.list_widget.insertItem(item_nbr,element)
+		for idx, event in enumerate(self._visible_events):
+			self.list_widget.insertItem(idx, event.to_text())
+
+	def _available_action_list(self):
+		actions = set(self.main_window.QUICK_LABEL_HOTKEYS.values())
+		if getattr(self.main_window, "list_manager", None):
+			for event in self.main_window.list_manager.event_list:
+				val = getattr(event, "label", None)
+				if val:
+					actions.add(str(val))
+		return sorted(actions, key=lambda s: s.lower())
+
+	def _show_dropdown(self):
+		# Make sure model is fresh before showing
+		self._actions_model.setStringList(self._available_action_list())
+
+		# Set the completer prefix to whatever user typed
+		self._completer.setCompletionPrefix(self._typed_text)
+		self._completer.complete()
+
+		# Set the index to the search bar
+		popup = self._completer.popup()
+		popup.setCurrentIndex(popup.model().index(-1, -1))
+
+
+	def _commit_action_from_dropdown(self, text):
+		# Commit the chosen action and filter event list
+		action = (text or "").strip()
+		if not action:
+			return
+
+		self._committed_action = action
+
+		# Update the text box to show committed filter
+		self.search_input.blockSignals(True)
+		self.search_input.setText(action)
+		self.search_input.blockSignals(False)
+
+		# Filter the events list
+		self.display_list()
+
+	def _commit_from_enter(self):
+		# Enter should commit the currently highlighted dropdown item if popup is open.
+		popup = self._completer.popup()
+		if popup and popup.isVisible():
+			idx = popup.currentIndex()
+			if idx.isValid():
+				text = idx.data()
+				self._commit_action_from_dropdown(text)
+				popup.hide()
+				return
+
+		# If popup isn't open, commit whatever is typed as an exact action filter
+		txt = (self.search_input.text() or "").strip()
+		if txt:
+			self._commit_action_from_dropdown(txt)
+
+	def _on_search_text_edited(self, text):
+		self._typed_text = (text or "")
+		self._show_dropdown()
+
+
+	def _clear_filter(self):
+		self._typed_text = ""
+		self._committed_action = ""
+
+		self.search_input.blockSignals(True)
+		self.search_input.clear()
+		self.search_input.blockSignals(False)
+
+		# Hide popup if open
+		popup = self._completer.popup()
+		if popup and popup.isVisible():
+			popup.hide()
+
+		self.display_list()
+
+	def _filter_events(self, events):
+		if not self._committed_action:
+			return list(events)
+
+		target = self._committed_action.strip().lower()
+		return [e for e in events if str(getattr(e, "label", None)).strip().lower() == target]
+
+
+	def eventFilter(self, obj, event):
+		if obj is self.search_input and event.type() == QEvent.MouseButtonPress:
+			self.main_window._end_edit_event(keep_focus=True)
+			# Show dropdown on click into the bar
+			out = super().eventFilter(obj, event)
+			self._typed_text = (self.search_input.text() or "").strip()
+			self._show_dropdown()
+			return out
+
+		if obj is self.search_input and event.type() == QEvent.KeyPress:
+			key = event.key()
+
+			# Up/Down should navigate the dropdown
+			if key in (Qt.Key_Down, Qt.Key_Up):
+				self._show_dropdown()
+				popup = self._completer.popup()
+				if popup and popup.isVisible():
+					# Forward the key to popup for normal navigation
+					QApplication.sendEvent(popup, event)
+					return True
+				return False
+
+			# Enter commits (handled by returnPressed too, but intercept to be safe)
+			if key in (Qt.Key_Return, Qt.Key_Enter):
+				self._commit_from_enter()
+				return True
+
+			# Escape hides dropdown or clears if already hidden
+			if key == Qt.Key_Escape:
+				popup = self._completer.popup()
+				if popup and popup.isVisible():
+					popup.hide()
+				else:
+					self._clear_filter()
+				return True
+
+		return super().eventFilter(obj, event)

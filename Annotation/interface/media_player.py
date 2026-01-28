@@ -100,7 +100,7 @@ class MediaPlayer(QWidget):
 			self.path_label = os.path.dirname(filename) + "/Labels.json"
 			self.path_label = self.get_last_label_file()
 			self.main_window.list_manager.create_list_from_json(self.path_label, self.main_window.half)
-			self.main_window.list_display.display_list(self.main_window.list_manager.create_text_list())
+			self.main_window.list_display.display_list()
 
 	def get_last_label_file(self):
 		path_label = self.path_label
