@@ -2,7 +2,7 @@
 
 class Event:
 
-	def __init__(self, label=None, half=None, time=None, team=None, position= None, visibility=None):
+	def __init__(self, label=None, half=None, time=None, team=None, position=None, visibility=None, frame=None):
 
 		self.label = label
 		self.half = half
@@ -10,6 +10,7 @@ class Event:
 		self.team = team
 		self.position = position
 		self.visibility = visibility
+		self.frame = frame if frame is not None else 0
 
 	def to_text(self):
 		return self.time + " || " + self.label + " - " + self.team  + " - " + str(self.half) + " - " + str(self.visibility)

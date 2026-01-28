@@ -135,6 +135,7 @@ class EventSelectionWindow(QMainWindow):
 				self.second_label,
 				position,
 				item.text(),
+				self.main_window.position_to_frame(position)
 			))
 
 			self.main_window.list_display.display_list(

@@ -1,7 +1,7 @@
 # Adapted from https://codeloop.org/python-how-to-create-media-player-in-pyqt5/
 import os
 from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaMetaData
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtCore import Qt, QUrl
 
@@ -82,6 +82,7 @@ class MediaPlayer(QWidget):
 		self.media_player.stateChanged.connect(self.mediastate_changed)
 		self.media_player.positionChanged.connect(self.position_changed)
 		self.media_player.durationChanged.connect(self.duration_changed)
+		self.media_player.metaDataChanged.connect(self._update_video_metadata)
 
 		self.path_label = None
 
@@ -143,7 +144,7 @@ class MediaPlayer(QWidget):
 		"""Update the overlay label with current position and editing mode"""
 		position = self.media_player.position()
 		# Convert milliseconds to frame number
-		frame_number = int(position / self.main_window.frame_duration_ms)
+		frame_number = int(round(position / self.main_window.frame_duration_ms))
 		frame_str = f"Frame: {frame_number}"
 		
 		# Check if we're in editing mode
@@ -184,4 +185,9 @@ class MediaPlayer(QWidget):
 		self.media_player.stateChanged.disconnect()
 		self.media_player.positionChanged.disconnect()
 		self.media_player.durationChanged.disconnect()
+
+	def _update_video_metadata(self):
+		frame_rate = self.media_player.metaData(QMediaMetaData.VideoFrameRate)
+		self.main_window.set_frame_rate(frame_rate)
+		self.update_overlay()
 
