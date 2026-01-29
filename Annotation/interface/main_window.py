@@ -134,6 +134,28 @@ class MainWindow(QMainWindow):
 			if duration and duration > 0:
 				new_pos = min(new_pos, duration)
 
+			attempts = 0
+			while attempts < 1000:
+				new_frame = self.position_to_frame(new_pos)
+				if not self.list_manager.find_event_by_frame(new_frame, self.half, exclude=self.edit_event_obj):
+					break
+
+				if delta > 0:
+					if duration and new_pos >= duration:
+						new_pos = duration
+						break
+					new_pos = max(0, new_pos + step_ms)
+					if duration and new_pos > duration:
+						new_pos = duration
+						break
+				else:
+					if new_pos <= 0:
+						new_pos = 0
+						break
+					new_pos = max(0, new_pos - step_ms)
+
+				attempts += 1
+
 			# Update the object in-place, then resort list
 			self.edit_event_obj.position = new_pos
 			self.edit_event_obj.time = ms_to_time(new_pos)
