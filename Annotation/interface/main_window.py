@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout
+from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QMessageBox
 from PyQt5.QtGui import QPalette
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtMultimedia import QMediaPlayer
@@ -286,18 +286,28 @@ class MainWindow(QMainWindow):
 	def _open_event_window_for_edit(self):
 		if not self.edit_event_obj:
 			return
-		if not self._show_event_window():
+		if not self._show_event_window(for_edit=True):
 			return
 
 		ok = self.event_window.preselect_event(self.edit_event_obj)
 		if not ok:
 			self.event_window.list_widget.setFocus()
 
-	def _show_event_window(self):
+	def _show_event_window(self, for_edit=False):
 		if not self.media_player.play_button.isEnabled():
 			return False
 		if self.media_player.media_player.state() == QMediaPlayer.PlayingState:
 			return False
+
+		if not for_edit:
+			frame = self.position_to_frame(self.media_player.media_player.position())
+			if self.list_manager.find_event_by_frame(frame, self.half):
+				QMessageBox.warning(
+					self,
+					"Duplicate frame",
+					"An event already exists on this frame. Delete it before creating another or pick a different frame. If you are editing an existing event, use Command/Ctrl + Enter to reopen the annotation window.",
+				)
+				return False
 
 		self.event_window.set_position()
 		self.event_window.show()

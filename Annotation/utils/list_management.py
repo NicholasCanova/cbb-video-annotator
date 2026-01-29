@@ -41,6 +41,17 @@ class ListManager:
 		self.event_list.append(event)
 		self.sort_list()
 
+	def find_event_by_frame(self, frame, half=None, exclude=None):
+		if frame is None:
+			return None
+
+		for event in self.event_list:
+			if exclude is not None and event is exclude:
+				continue
+			if event.frame == frame and (half is None or event.half == half):
+				return event
+		return None
+
 	def get_event(self, index):
 		if index is None:
 			return None
