@@ -130,6 +130,10 @@ class MainWindow(QMainWindow):
 			old_pos = int(self.edit_event_obj.position)
 			new_pos = max(0, old_pos + int(delta))
 
+			duration = self.media_player.media_player.duration()
+			if duration and duration > 0:
+				new_pos = min(new_pos, duration)
+
 			# Update the object in-place, then resort list
 			self.edit_event_obj.position = new_pos
 			self.edit_event_obj.time = ms_to_time(new_pos)
