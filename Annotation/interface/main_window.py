@@ -58,6 +58,7 @@ class MainWindow(QMainWindow):
 		self.half = 1
 		self.editing_event = False
 		self.edit_event_obj = None
+		self.edit_event_original = None
 
 		# Defining some variables of the window
 		self.title_main_window = "Event Annotator"
@@ -254,8 +255,12 @@ class MainWindow(QMainWindow):
 			self.setFocus()
 
 		if event.key() == Qt.Key_Escape:
-			self.list_display.list_widget.setCurrentRow(-1)
-			self.setFocus()
+			if self.editing_event:
+				self._revert_edit_event()
+			else:
+				self.list_display.list_widget.setCurrentRow(-1)
+				self.setFocus()
+			return
 
 		if event.modifiers() & Qt.ControlModifier:
 			ctrl = True
@@ -349,12 +354,36 @@ class MainWindow(QMainWindow):
 	def _begin_edit_event(self, event_obj):
 		self.editing_event = True
 		self.edit_event_obj = event_obj
+		self.edit_event_original = {
+			"position": event_obj.position,
+			"time": event_obj.time,
+			"frame": event_obj.frame,
+		}
 		# Update overlay to show editing mode
 		self.media_player.update_overlay()
+
+	def _revert_edit_event(self):
+		if not self.edit_event_obj or not self.edit_event_original:
+			self._end_edit_event()
+			return
+
+		self.edit_event_obj.position = self.edit_event_original["position"]
+		self.edit_event_obj.time = self.edit_event_original["time"]
+		self.edit_event_obj.frame = self.edit_event_original["frame"]
+
+		self.list_manager.sort_list()
+		self.list_display.display_list()
+		
+		new_row = self.list_manager.event_list.index(self.edit_event_obj)
+		self.list_display.list_widget.setCurrentRow(new_row)
+
+		self.media_player.set_position(self.edit_event_original["position"])
+		self._end_edit_event()
 
 	def _end_edit_event(self, keep_focus=False):
 		self.editing_event = False
 		self.edit_event_obj = None
+		self.edit_event_original = None
 		# Clear list selection so arrows go back to scrubbing
 		self.list_display.list_widget.setCurrentRow(-1)
 		# Update overlay to show normal mode
