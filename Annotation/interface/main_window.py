@@ -32,6 +32,8 @@ class MainWindow(QMainWindow):
 		Qt.Key_I: "Roller Defender Hedging",
 		Qt.Key_J: "2P Shot",
 		Qt.Key_K: "3P Shot",
+		Qt.Key_F: "Free Throw",
+		Qt.Key_G: "Missed Shot",
 		Qt.Key_B: "Made Shot",
 		Qt.Key_C: "Blocked Shot",
 		Qt.Key_V: "Rebound",

@@ -19,7 +19,9 @@ Roller Defender Dropping
 Roller Defender Hedging
 2P Shot
 3P Shot
+Free Throw
 Made Shot
+Missed Shot
 Blocked Shot
 Rebound
 Turnover with Steal
