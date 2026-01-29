@@ -158,6 +158,7 @@ class MainWindow(QMainWindow):
 				self.list_display.display_list()
 				path_label = self.media_player.get_last_label_file()
 				self.list_manager.save_file(path_label, self.half)
+				self._end_edit_event()
 			self.setFocus()
 
 		# Play or pause the video with the space key
