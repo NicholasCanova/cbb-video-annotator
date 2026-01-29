@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout
+from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QMessageBox
 from PyQt5.QtGui import QPalette
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtMultimedia import QMediaPlayer
@@ -32,6 +32,8 @@ class MainWindow(QMainWindow):
 		Qt.Key_I: "Roller Defender Hedging",
 		Qt.Key_J: "2P Shot",
 		Qt.Key_K: "3P Shot",
+		Qt.Key_F: "Free Throw",
+		Qt.Key_G: "Missed Shot",
 		Qt.Key_B: "Made Shot",
 		Qt.Key_C: "Blocked Shot",
 		Qt.Key_V: "Rebound",
@@ -56,6 +58,7 @@ class MainWindow(QMainWindow):
 		self.half = 1
 		self.editing_event = False
 		self.edit_event_obj = None
+		self.edit_event_original = None
 
 		# Defining some variables of the window
 		self.title_main_window = "Event Annotator"
@@ -128,6 +131,32 @@ class MainWindow(QMainWindow):
 			old_pos = int(self.edit_event_obj.position)
 			new_pos = max(0, old_pos + int(delta))
 
+			duration = self.media_player.media_player.duration()
+			if duration and duration > 0:
+				new_pos = min(new_pos, duration)
+
+			attempts = 0
+			while attempts < 1000:
+				new_frame = self.position_to_frame(new_pos)
+				if not self.list_manager.find_event_by_frame(new_frame, self.half, exclude=self.edit_event_obj):
+					break
+
+				if delta > 0:
+					if duration and new_pos >= duration:
+						new_pos = duration
+						break
+					new_pos = max(0, new_pos + step_ms)
+					if duration and new_pos > duration:
+						new_pos = duration
+						break
+				else:
+					if new_pos <= 0:
+						new_pos = 0
+						break
+					new_pos = max(0, new_pos - step_ms)
+
+				attempts += 1
+
 			# Update the object in-place, then resort list
 			self.edit_event_obj.position = new_pos
 			self.edit_event_obj.time = ms_to_time(new_pos)
@@ -156,6 +185,7 @@ class MainWindow(QMainWindow):
 				self.list_display.display_list()
 				path_label = self.media_player.get_last_label_file()
 				self.list_manager.save_file(path_label, self.half)
+				self._end_edit_event()
 			self.setFocus()
 
 		# Play or pause the video with the space key
@@ -182,8 +212,13 @@ class MainWindow(QMainWindow):
 					self.media_player.media_player.setPosition(position + step)
 			self.setFocus()
 
-		# Enter: lock edited timestamp OR open new annotation
+		# Enter: lock edited timestamp, edit label, or open new annotation
 		if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+			# Command/Ctrl + Enter should reopen the annotation window while editing
+			if self.editing_event and event.modifiers() & (Qt.MetaModifier | Qt.ControlModifier):
+				self._open_event_window_for_edit()
+				return
+
 			# Enter in edit mode: save and exit edit mode
 			if self.editing_event:
 				if self.media_player.play_button.isEnabled():
@@ -194,10 +229,7 @@ class MainWindow(QMainWindow):
 
 			# Enter when not editing: open new annotation
 			if self.media_player.play_button.isEnabled() and not self.media_player.media_player.state() == QMediaPlayer.PlayingState:
-				self.event_window.set_position()
-				self.event_window.show()
-				self.event_window.setFocus()
-				self.event_window.list_widget.setFocus()
+				self._open_event_window_with_label(None)
 			return
 
 
@@ -223,8 +255,12 @@ class MainWindow(QMainWindow):
 			self.setFocus()
 
 		if event.key() == Qt.Key_Escape:
-			self.list_display.list_widget.setCurrentRow(-1)
-			self.setFocus()
+			if self.editing_event:
+				self._revert_edit_event()
+			else:
+				self.list_display.list_widget.setCurrentRow(-1)
+				self.setFocus()
+			return
 
 		if event.modifiers() & Qt.ControlModifier:
 			ctrl = True
@@ -271,18 +307,43 @@ class MainWindow(QMainWindow):
 		return max(0, int(round(position_ms / frame_duration_ms)))
 
 	def _open_event_window_with_label(self, label: str):
-		if not self.media_player.play_button.isEnabled():
+		if not self._show_event_window():
 			return
-		if self.media_player.media_player.state() == QMediaPlayer.PlayingState:
-			return
-
-		self.event_window.set_position()
-		self.event_window.show()
-		self.event_window.setFocus()
 
 		ok = self.event_window.preselect_first_label(label)
 		if not ok:
 			self.event_window.list_widget.setFocus()
+
+	def _open_event_window_for_edit(self):
+		if not self.edit_event_obj:
+			return
+		if not self._show_event_window(for_edit=True):
+			return
+
+		ok = self.event_window.preselect_event(self.edit_event_obj)
+		if not ok:
+			self.event_window.list_widget.setFocus()
+
+	def _show_event_window(self, for_edit=False):
+		if not self.media_player.play_button.isEnabled():
+			return False
+		if self.media_player.media_player.state() == QMediaPlayer.PlayingState:
+			return False
+
+		if not for_edit:
+			frame = self.position_to_frame(self.media_player.media_player.position())
+			if self.list_manager.find_event_by_frame(frame, self.half):
+				QMessageBox.warning(
+					self,
+					"Duplicate frame",
+					"An event already exists on this frame. Delete it before creating another or pick a different frame. If you are editing an existing event, use Command/Ctrl + Enter to reopen the annotation window.",
+				)
+				return False
+
+		self.event_window.set_position()
+		self.event_window.show()
+		self.event_window.setFocus()
+		return True
 
 	def _set_initial_focus(self):
 		# Prefer focusing the main window so keyPressEvent gets keys
@@ -293,12 +354,36 @@ class MainWindow(QMainWindow):
 	def _begin_edit_event(self, event_obj):
 		self.editing_event = True
 		self.edit_event_obj = event_obj
+		self.edit_event_original = {
+			"position": event_obj.position,
+			"time": event_obj.time,
+			"frame": event_obj.frame,
+		}
 		# Update overlay to show editing mode
 		self.media_player.update_overlay()
+
+	def _revert_edit_event(self):
+		if not self.edit_event_obj or not self.edit_event_original:
+			self._end_edit_event()
+			return
+
+		self.edit_event_obj.position = self.edit_event_original["position"]
+		self.edit_event_obj.time = self.edit_event_original["time"]
+		self.edit_event_obj.frame = self.edit_event_original["frame"]
+
+		self.list_manager.sort_list()
+		self.list_display.display_list()
+		
+		new_row = self.list_manager.event_list.index(self.edit_event_obj)
+		self.list_display.list_widget.setCurrentRow(new_row)
+
+		self.media_player.set_position(self.edit_event_original["position"])
+		self._end_edit_event()
 
 	def _end_edit_event(self, keep_focus=False):
 		self.editing_event = False
 		self.edit_event_obj = None
+		self.edit_event_original = None
 		# Clear list selection so arrows go back to scrubbing
 		self.list_display.list_widget.setCurrentRow(-1)
 		# Update overlay to show normal mode

@@ -22,15 +22,35 @@ class ListManager:
 
 		return list_text
 
-	def delete_event(self, index):
+	def delete_event(self, target):
+		if isinstance(target, Event):
+			self.event_list.remove(target)
+		else:
+			if target is None:
+				return False
+			if target < 0 or target >= len(self.event_list):
+				return False
+			self.event_list.pop(target)
 
-		self.event_list.pop(index)
 		self.sort_list()
+		return True
+
 
 	def add_event(self, event):
 
 		self.event_list.append(event)
 		self.sort_list()
+
+	def find_event_by_frame(self, frame, half=None, exclude=None):
+		if frame is None:
+			return None
+
+		for event in self.event_list:
+			if exclude is not None and event is exclude:
+				continue
+			if event.frame == frame and (half is None or event.half == half):
+				return event
+		return None
 
 	def get_event(self, index):
 		if index is None:
@@ -60,14 +80,12 @@ class ListManager:
 
 
 	def sort_list(self):
+		def sort_key(event):
+			if getattr(event, "frame", None) is not None:
+				return event.frame
+			return getattr(event, "position", 0)
 
-		position = list()
-		for event in self.event_list:
-			position.append(event.position)
-
-		self.event_list = [x for _,x in sorted(zip(position,self.event_list))]
-
-		self.event_list.reverse()
+		self.event_list = sorted(self.event_list, key=sort_key, reverse=True)
 
 	def soccerNetToV2(self,label):
 
