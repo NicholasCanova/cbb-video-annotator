@@ -80,14 +80,12 @@ class ListManager:
 
 
 	def sort_list(self):
+		def sort_key(event):
+			if getattr(event, "frame", None) is not None:
+				return event.frame
+			return getattr(event, "position", 0)
 
-		position = list()
-		for event in self.event_list:
-			position.append(event.position)
-
-		self.event_list = [x for _,x in sorted(zip(position,self.event_list))]
-
-		self.event_list.reverse()
+		self.event_list = sorted(self.event_list, key=sort_key, reverse=True)
 
 	def soccerNetToV2(self,label):
 
