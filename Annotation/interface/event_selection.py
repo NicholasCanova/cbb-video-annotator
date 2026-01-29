@@ -128,6 +128,9 @@ class EventSelectionWindow(QMainWindow):
 
 			position = self.main_window.media_player.media_player.position()
 
+			if self.main_window.editing_event and self.main_window.edit_event_obj:
+				self.main_window.list_manager.delete_event(self.main_window.edit_event_obj)
+
 			self.main_window.list_manager.add_event(Event(
 				self.first_label,
 				self.main_window.half,
@@ -142,6 +145,9 @@ class EventSelectionWindow(QMainWindow):
 
 			path_label = self.main_window.media_player.get_last_label_file()
 			self.main_window.list_manager.save_file(path_label, self.main_window.half)
+
+			if self.main_window.editing_event:
+				self.main_window._end_edit_event()
 
 			self._reset_and_close()
 
@@ -172,6 +178,19 @@ class EventSelectionWindow(QMainWindow):
 
 		if list_widget.currentRow() < 0:
 			list_widget.setCurrentRow(0)
+
+	def _match_and_select(self, list_widget, target_text):
+		target = (target_text or "").strip().lower()
+		if not target:
+			return None
+
+		for idx in range(list_widget.count()):
+			item = list_widget.item(idx)
+			if item and item.text().strip().lower() == target:
+				list_widget.setCurrentRow(idx)
+				return item.text()
+
+		return None
 
 	def _reset_and_close(self):
 		self.step = Step.FIRST
@@ -211,3 +230,21 @@ class EventSelectionWindow(QMainWindow):
 				return True
 
 		return False
+
+	def preselect_event(self, event):
+		if not event:
+			return False
+
+		if not self.preselect_first_label(event.label):
+			return False
+
+		second_match = self._match_and_select(self.list_widget_second, event.team)
+		if second_match:
+			self.second_label = second_match
+			self.step = Step.THIRD
+			self._enter_step(self.list_widget_third)
+			self._match_and_select(self.list_widget_third, event.visibility)
+		else:
+			self.step = Step.SECOND
+
+		return True

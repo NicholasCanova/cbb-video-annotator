@@ -185,8 +185,13 @@ class MainWindow(QMainWindow):
 					self.media_player.media_player.setPosition(position + step)
 			self.setFocus()
 
-		# Enter: lock edited timestamp OR open new annotation
+		# Enter: lock edited timestamp, edit label, or open new annotation
 		if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+			# Command/Ctrl + Enter should reopen the annotation window while editing
+			if self.editing_event and event.modifiers() & (Qt.MetaModifier | Qt.ControlModifier):
+				self._open_event_window_for_edit()
+				return
+
 			# Enter in edit mode: save and exit edit mode
 			if self.editing_event:
 				if self.media_player.play_button.isEnabled():
@@ -197,10 +202,7 @@ class MainWindow(QMainWindow):
 
 			# Enter when not editing: open new annotation
 			if self.media_player.play_button.isEnabled() and not self.media_player.media_player.state() == QMediaPlayer.PlayingState:
-				self.event_window.set_position()
-				self.event_window.show()
-				self.event_window.setFocus()
-				self.event_window.list_widget.setFocus()
+				self._open_event_window_with_label(None)
 			return
 
 
@@ -274,18 +276,33 @@ class MainWindow(QMainWindow):
 		return max(0, int(round(position_ms / frame_duration_ms)))
 
 	def _open_event_window_with_label(self, label: str):
-		if not self.media_player.play_button.isEnabled():
+		if not self._show_event_window():
 			return
-		if self.media_player.media_player.state() == QMediaPlayer.PlayingState:
-			return
-
-		self.event_window.set_position()
-		self.event_window.show()
-		self.event_window.setFocus()
 
 		ok = self.event_window.preselect_first_label(label)
 		if not ok:
 			self.event_window.list_widget.setFocus()
+
+	def _open_event_window_for_edit(self):
+		if not self.edit_event_obj:
+			return
+		if not self._show_event_window():
+			return
+
+		ok = self.event_window.preselect_event(self.edit_event_obj)
+		if not ok:
+			self.event_window.list_widget.setFocus()
+
+	def _show_event_window(self):
+		if not self.media_player.play_button.isEnabled():
+			return False
+		if self.media_player.media_player.state() == QMediaPlayer.PlayingState:
+			return False
+
+		self.event_window.set_position()
+		self.event_window.show()
+		self.event_window.setFocus()
+		return True
 
 	def _set_initial_focus(self):
 		# Prefer focusing the main window so keyPressEvent gets keys

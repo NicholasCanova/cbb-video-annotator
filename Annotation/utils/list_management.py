@@ -22,10 +22,19 @@ class ListManager:
 
 		return list_text
 
-	def delete_event(self, index):
+	def delete_event(self, target):
+		if isinstance(target, Event):
+			self.event_list.remove(target)
+		else:
+			if target is None:
+				return False
+			if target < 0 or target >= len(self.event_list):
+				return False
+			self.event_list.pop(target)
 
-		self.event_list.pop(index)
 		self.sort_list()
+		return True
+
 
 	def add_event(self, event):
 
