@@ -61,6 +61,7 @@ class MediaPlayer(QWidget):
 		self.slider = QSlider(Qt.Horizontal)
 		self.slider.setRange(0,0)
 		self.slider.sliderMoved.connect(self.set_position)
+		self.slider.sliderReleased.connect(self._slider_released)
 
 		#create hbox layout
 		hboxLayout = QHBoxLayout()
@@ -139,6 +140,9 @@ class MediaPlayer(QWidget):
 
 	def set_position(self, position):
 		self.media_player.setPosition(position)
+	
+	def _slider_released(self):
+		self.set_position(self.slider.value())
 	
 	def update_overlay(self):
 		"""Update the overlay label with current position and editing mode"""
