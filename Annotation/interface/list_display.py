@@ -71,8 +71,11 @@ class ListDisplay(QWidget):
 		self._clip_pause_timer = QTimer(self)
 		self._clip_pause_timer.setSingleShot(True)
 		self._clip_pause_timer.timeout.connect(self._play_next_clip)
+		self.list_widget.itemDoubleClicked.connect(self._on_event_double_clicked)
 
 		self.main_window.media_player.media_player.positionChanged.connect(self._handle_position_update)
+
+		
 
 	def _on_event_clicked(self, model_index):
 		row = model_index.row()
@@ -81,6 +84,16 @@ class ListDisplay(QWidget):
 				self._jump_to_clip_for_row(row)
 			else:
 				self._activate_row(row)
+
+	def _on_event_double_clicked(self, item):
+		row = self.list_widget.row(item)
+		if row < 0:
+			return
+
+		if self._playing_clips:
+			self._stop_clip_sequence()
+
+		self._activate_row(row)
 
 	def _activate_row(self, row):
 		if row < 0 or row >= len(self._visible_events):
