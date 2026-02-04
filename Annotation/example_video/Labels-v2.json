@@ -3,66 +3,91 @@
     "UrlYoutube": "",
     "annotations": [
         {
+            "frame": "13",
+            "gameTime": "1 - 00:00",
+            "label": "Drive",
+            "position": "527",
+            "team": "Left",
+            "visibility": "visible"
+        },
+        {
+            "frame": "14",
+            "gameTime": "1 - 00:00",
+            "label": "Drive",
+            "position": "543",
+            "team": "Left",
+            "visibility": "visible"
+        },
+        {
+            "frame": "16",
+            "gameTime": "1 - 00:00",
+            "label": "Dribble Handoff",
+            "position": "648",
+            "team": "None",
+            "visibility": "visible"
+        },
+        {
+            "frame": "17",
+            "gameTime": "1 - 00:00",
+            "label": "Dribble Handoff",
+            "position": "678",
+            "team": "None",
+            "visibility": "visible"
+        },
+        {
+            "frame": "19",
+            "gameTime": "1 - 00:00",
+            "label": "On Ball Screen",
+            "position": "756",
+            "team": "None",
+            "visibility": "visible"
+        },
+        {
+            "frame": "21",
+            "gameTime": "1 - 00:00",
+            "label": "On Ball Screen",
+            "position": "823",
+            "team": "None",
+            "visibility": "visible"
+        },
+        {
+            "frame": "27",
+            "gameTime": "1 - 00:01",
+            "label": "Fake Handoff",
+            "position": "1069",
+            "team": "None",
+            "visibility": "visible"
+        },
+        {
+            "frame": "29",
+            "gameTime": "1 - 00:01",
+            "label": "Drive",
+            "position": "1150",
+            "team": "Left",
+            "visibility": "visible"
+        },
+        {
+            "frame": "63",
+            "gameTime": "1 - 00:02",
+            "label": "Dribble Handoff",
+            "position": "2511",
+            "team": "None",
+            "visibility": "visible"
+        },
+        {
+            "frame": "75",
             "gameTime": "1 - 00:03",
-            "label": "Dribble",
-            "position": "3888",
-            "team": "home",
+            "label": "Dribble Handoff",
+            "position": "3001",
+            "team": "None",
             "visibility": "visible"
         },
         {
-            "gameTime": "1 - 00:04",
-            "label": "Pass",
-            "position": "4477",
-            "team": "not applicable",
-            "visibility": "not applicable"
-        },
-        {
-            "gameTime": "1 - 00:04",
-            "label": "Pass",
-            "position": "4477",
-            "team": "home",
-            "visibility": "visible"
-        },
-        {
-            "gameTime": "1 - 00:04",
-            "label": "Pass",
-            "position": "4477",
-            "team": "away",
-            "visibility": "visible"
-        },
-        {
-            "gameTime": "1 - 00:04",
-            "label": "Pass",
-            "position": "4482",
-            "team": "home",
-            "visibility": "visible"
-        },
-        {
-            "gameTime": "1 - 00:04",
-            "label": "Pass",
-            "position": "4664",
-            "team": "home",
-            "visibility": "visible"
-        },
-        {
-            "gameTime": "1 - 00:05",
-            "label": "2-point shot",
-            "position": "5637",
-            "team": "home",
-            "visibility": "visible"
-        },
-        {
-            "gameTime": "1 - 00:06",
-            "label": "Pass",
-            "position": "6200",
-            "team": "home",
-            "visibility": "visible"
-        },
-        {
-            "gameTime": "1 - 00:06",
-            "label": "Pass",
-            "position": "6200",
-            "team": "away",
+            "frame": "78",
+            "gameTime": "1 - 00:03",
+            "label": "Fake Handoff",
+            "position": "3126",
+            "team": "None",
             "visibility": "visible"
         }
     ],

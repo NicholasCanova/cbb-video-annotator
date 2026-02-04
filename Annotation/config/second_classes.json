@@ -1,5 +1,5 @@
 {
-	"default": ["home", "away", "not applicable"],
+	"default": [],
 	"Drive": ["Left", "Right"],
 	"Post Up": ["Left", "Right"],
 	"Isolation": ["Left", "Right"],

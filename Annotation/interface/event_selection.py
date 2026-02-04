@@ -39,7 +39,6 @@ class EventSelectionWindow(QMainWindow):
 		base = Path(__file__).resolve().parent
 
 		self.labels = self._read_labels(base / "../config/classes.txt")
-		self.second_labels_default = self._read_labels(base / "../config/second_classes.txt")
 		self.second_label_map = self._read_second_label_map(base / "../config/second_classes.json")
 		self.third_labels = self._read_labels(base / "../config/third_classes.txt")
 
@@ -101,12 +100,14 @@ class EventSelectionWindow(QMainWindow):
 			if options:
 				return options
 
-		return self.second_label_map.get("default", self.second_labels_default)
+		return self.second_label_map.get("default", [])
 
 	def _populate_second_list(self, first_label):
 		self.list_widget_second.clear()
-		for item_nbr, element in enumerate(self._second_labels_for(first_label)):
+		options = self._second_labels_for(first_label)
+		for item_nbr, element in enumerate(options):
 			self.list_widget_second.insertItem(item_nbr, element)
+		return bool(options)
 
 	def set_position(self):
 		x = self.main_window.pos().x() + self.main_window.frameGeometry().width() // 4
@@ -140,7 +141,13 @@ class EventSelectionWindow(QMainWindow):
 				return
 
 			self.first_label = item.text()
-			self._populate_second_list(self.first_label)
+			has_second = self._populate_second_list(self.first_label)
+			if not has_second:
+				self.second_label = None
+				self.step = Step.THIRD
+				self._enter_step(self.list_widget_third)
+				return
+
 			self.step = Step.SECOND
 			self._enter_step(self.list_widget_second)
 
@@ -261,10 +268,14 @@ class EventSelectionWindow(QMainWindow):
 			if item and item.text().strip().lower() == target:
 				self.list_widget.setCurrentRow(i)
 				self.first_label = item.text()
-				self._populate_second_list(self.first_label)
-				self.step = Step.SECOND
+				has_second = self._populate_second_list(self.first_label)
 				self.second_label = None
-				self._enter_step(self.list_widget_second)
+				if not has_second:
+					self.step = Step.THIRD
+					self._enter_step(self.list_widget_third)
+				else:
+					self.step = Step.SECOND
+					self._enter_step(self.list_widget_second)
 				return True
 
 		return False
