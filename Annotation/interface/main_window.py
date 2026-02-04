@@ -212,8 +212,14 @@ class MainWindow(QMainWindow):
 					self.media_player.media_player.setPosition(position + step)
 			self.setFocus()
 
-		# Enter: lock edited timestamp, edit label, or open new annotation
+		# Enter: when viewing clips, stop and start editing; otherwise lock timestamp, edit label, or open new annotation
 		if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+			if self.list_display._playing_clips:
+				row = self.list_display.list_widget.currentRow()
+				self.list_display._stop_clip_sequence()
+				if row >= 0:
+					self.list_display._activate_row(row)
+				return
 			# Command/Ctrl + Enter should reopen the annotation window while editing
 			if self.editing_event and event.modifiers() & (Qt.MetaModifier | Qt.ControlModifier):
 				self._open_event_window_for_edit()
