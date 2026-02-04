@@ -9,6 +9,7 @@ Isolation
 Cut
 Screener Rolling to Rim
 Screener Popping to 3P Line
+Screener Ghosts to 3P Line
 Screener Slipping the Screen
 Defenders Double Team
 Defenders Switch
@@ -28,3 +29,4 @@ Turnover with Steal
 Turnover without Steal
 Foul Committed
 Pass
+Deflection

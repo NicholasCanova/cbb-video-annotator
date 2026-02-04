@@ -1,5 +1,6 @@
 from enum import IntEnum
 from pathlib import Path
+import json
 
 from PyQt5.QtWidgets import QMainWindow, QWidget, QListWidget, QHBoxLayout
 from PyQt5.QtGui import QPalette
@@ -38,7 +39,8 @@ class EventSelectionWindow(QMainWindow):
 		base = Path(__file__).resolve().parent
 
 		self.labels = self._read_labels(base / "../config/classes.txt")
-		self.second_labels = self._read_labels(base / "../config/second_classes.txt")
+		self.second_labels_default = self._read_labels(base / "../config/second_classes.txt")
+		self.second_label_map = self._read_second_label_map(base / "../config/second_classes.json")
 		self.third_labels = self._read_labels(base / "../config/third_classes.txt")
 
 		self.list_widget = QListWidget()
@@ -47,8 +49,7 @@ class EventSelectionWindow(QMainWindow):
 
 		for item_nbr, element in enumerate(self.labels):
 			self.list_widget.insertItem(item_nbr, element)
-		for item_nbr, element in enumerate(self.second_labels):
-			self.list_widget_second.insertItem(item_nbr, element)
+		self._populate_second_list(None)
 		for item_nbr, element in enumerate(self.third_labels):
 			self.list_widget_third.insertItem(item_nbr, element)
 
@@ -74,6 +75,38 @@ class EventSelectionWindow(QMainWindow):
 		if not path.exists():
 			return []
 		return [l.strip() for l in path.read_text().splitlines() if l.strip()]
+
+	def _read_second_label_map(self, path: Path):
+		if not path.exists():
+			return {}
+		try:
+			with path.open() as fh:
+				data = json.load(fh)
+		except (json.JSONDecodeError, IOError):
+			return {}
+
+		mapping = {}
+		for key, value in data.items():
+			if not key or not isinstance(value, list):
+				continue
+			items = [str(item).strip() for item in value if str(item).strip()]
+			if items:
+				mapping[str(key).strip()] = items
+
+		return mapping
+
+	def _second_labels_for(self, first_label: str):
+		if first_label:
+			options = self.second_label_map.get(first_label)
+			if options:
+				return options
+
+		return self.second_label_map.get("default", self.second_labels_default)
+
+	def _populate_second_list(self, first_label):
+		self.list_widget_second.clear()
+		for item_nbr, element in enumerate(self._second_labels_for(first_label)):
+			self.list_widget_second.insertItem(item_nbr, element)
 
 	def set_position(self):
 		x = self.main_window.pos().x() + self.main_window.frameGeometry().width() // 4
@@ -107,6 +140,7 @@ class EventSelectionWindow(QMainWindow):
 				return
 
 			self.first_label = item.text()
+			self._populate_second_list(self.first_label)
 			self.step = Step.SECOND
 			self._enter_step(self.list_widget_second)
 
@@ -162,6 +196,7 @@ class EventSelectionWindow(QMainWindow):
 			self.step = Step.FIRST
 			self.list_widget_second.setCurrentRow(-1)
 			self.second_label = None
+			self._populate_second_list(None)
 			self._enter_step(self.list_widget)
 			return
 
@@ -206,6 +241,8 @@ class EventSelectionWindow(QMainWindow):
 		self.list_widget_second.setCurrentRow(-1)
 		self.list_widget_third.setCurrentRow(-1)
 
+		self._populate_second_list(None)
+
 		# Drop focus off the lists
 		self.list_widget.clearFocus()
 		self.list_widget_second.clearFocus()
@@ -224,6 +261,7 @@ class EventSelectionWindow(QMainWindow):
 			if item and item.text().strip().lower() == target:
 				self.list_widget.setCurrentRow(i)
 				self.first_label = item.text()
+				self._populate_second_list(self.first_label)
 				self.step = Step.SECOND
 				self.second_label = None
 				self._enter_step(self.list_widget_second)
