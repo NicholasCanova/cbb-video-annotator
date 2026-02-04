@@ -41,6 +41,7 @@ class MainWindow(QMainWindow):
 		Qt.Key_M: "Turnover without Steal",
 		Qt.Key_L: "Foul Committed",
 		Qt.Key_P: "Pass",
+		Qt.Key_D: "Deflection",
 	}
 	def __init__(self):
 		super().__init__()

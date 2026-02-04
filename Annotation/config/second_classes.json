@@ -1,0 +1,7 @@
+{
+	"default": [],
+	"Drive": ["Left", "Right"],
+	"Post Up": ["Left", "Right"],
+	"Isolation": ["Left", "Right"],
+	"2P Shot": ["Other", "Layup", "Dunk"]
+}

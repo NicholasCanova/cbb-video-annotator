@@ -13,7 +13,12 @@ class Event:
 		self.frame = frame # if frame is not None else 0
 
 	def to_text(self):
-		return "Frame: " + str(self.frame) + " || " + self.label + " - " + self.team  + " - " + str(self.half) + " - " + str(self.visibility)
+		if self.team and self.team != "None":
+			label = self.label + " (" + self.team + ")"
+		else:
+			label = self.label
+
+		return "Frame: " + str(self.frame) + " || " + label + " - " + str(self.half) + " - " + str(self.visibility)
 
 	def __lt__(self, other):
 		self.position < other.position
