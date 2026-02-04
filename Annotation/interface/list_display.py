@@ -205,6 +205,9 @@ class ListDisplay(QWidget):
 		if not self.main_window.media_player.play_button.isEnabled():
 			return
 
+		if self.main_window.editing_event:
+			self.main_window._end_edit_event()
+
 		events = list(self._visible_events)
 		self._clip_sequence = self._build_clip_sequence(events)
 		if not self._clip_sequence:
