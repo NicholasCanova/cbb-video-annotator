@@ -10,10 +10,10 @@ class Event:
 		self.team = team
 		self.position = position
 		self.visibility = visibility
-		self.frame = frame if frame is not None else 0
+		self.frame = frame # if frame is not None else 0
 
 	def to_text(self):
-		return self.time + " || " + self.label + " - " + self.team  + " - " + str(self.half) + " - " + str(self.visibility)
+		return "Frame: " + str(self.frame) + " || " + self.label + " - " + self.team  + " - " + str(self.half) + " - " + str(self.visibility)
 
 	def __lt__(self, other):
 		self.position < other.position
