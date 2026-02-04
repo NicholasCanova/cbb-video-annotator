@@ -77,7 +77,10 @@ class ListDisplay(QWidget):
 	def _on_event_clicked(self, model_index):
 		row = model_index.row()
 		if row >= 0:
-			self._activate_row(row)
+			if self._playing_clips:
+				self._jump_to_clip_for_row(row)
+			else:
+				self._activate_row(row)
 
 	def _activate_row(self, row):
 		if row < 0 or row >= len(self._visible_events):
@@ -220,6 +223,7 @@ class ListDisplay(QWidget):
 		return sequence
 
 	def _play_next_clip(self):
+		self._clip_pause_timer.stop()
 		if not self._playing_clips or self._current_clip_index >= len(self._clip_sequence):
 			self._stop_clip_sequence()
 			return
@@ -232,6 +236,7 @@ class ListDisplay(QWidget):
 		self._current_clip_end = end
 		player = self.main_window.media_player.media_player
 		player.play()
+		self.main_window.setFocus()
 
 	def _stop_clip_sequence(self):
 		self._clip_pause_timer.stop()
@@ -264,6 +269,24 @@ class ListDisplay(QWidget):
 				return
 
 			self._clip_pause_timer.start(1000)
+
+	def _jump_to_clip_for_row(self, row):
+		target = self._find_clip_index_for_row(row)
+		if target is None:
+			return
+
+		self._clip_pause_timer.stop()
+		player = self.main_window.media_player.media_player
+		player.pause()
+		self._current_clip_end = None
+		self._current_clip_index = target
+		self._play_next_clip()
+
+	def _find_clip_index_for_row(self, row):
+		for idx, clip in enumerate(self._clip_sequence):
+			if clip["row"] == row:
+				return idx
+		return None
 
 	def _filter_events(self, events):
 		if not self._committed_action:
