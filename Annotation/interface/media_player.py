@@ -3,7 +3,8 @@ import os
 from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaMetaData
 from PyQt5.QtMultimediaWidgets import QVideoWidget
-from PyQt5.QtCore import Qt, QUrl
+from PyQt5.QtCore import Qt, QUrl, QEvent
+from utils.event_class import ms_to_time
 
 class MediaPlayer(QWidget):
 
@@ -46,6 +47,25 @@ class MediaPlayer(QWidget):
 		self.overlay_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)  # Allow clicks to pass through
 		self.overlay_label.raise_()  # Raise above video widget
 		self.overlay_label.hide()  # Hide until video is loaded
+
+		# Label for showing current event info (top-right)
+		self.event_overlay = QLabel(self.video_container)
+		self.event_overlay.setStyleSheet("""
+			QLabel {
+				background-color: rgba(0, 0, 0, 180);
+				color: white;
+				padding: 8px 12px;
+				font-size: 16px;
+				font-weight: bold;
+				border-radius: 4px;
+			}
+		""")
+		self.event_overlay.setAlignment(Qt.AlignRight | Qt.AlignTop)
+		self.event_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+		self.event_overlay.raise_()
+		self.event_overlay.hide()
+
+		self.video_container.installEventFilter(self)
 
 		# Button to open a new file
 		self.open_file_button = QPushButton('Open video')
@@ -177,6 +197,42 @@ class MediaPlayer(QWidget):
 		# Resize and position overlay label
 		self.overlay_label.adjustSize()
 		self.overlay_label.raise_()  # Ensure it's on top
+
+	def display_event_info(self, event):
+		if not event:
+			self.event_overlay.hide()
+			return
+
+		label = event.label or "Unknown Event"
+		frame = getattr(event, "frame", "?")
+		position = getattr(event, "position", None)
+		if position is None:
+			time_str = event.time or "00:00"
+		else:
+			time_str = ms_to_time(position)
+
+		parts = [label]
+		if event.team:
+			parts.append(event.team)
+		parts.append(f"{time_str} | Frame: {frame}")
+		self.event_overlay.setText(" · ".join(parts))
+		self.event_overlay.adjustSize()
+		self.event_overlay.raise_()
+		self.event_overlay.show()
+		self._position_event_overlay()
+
+	def _position_event_overlay(self):
+		if not self.event_overlay.isVisible():
+			return
+		margin = 16
+		container_width = self.video_container.width()
+		x = max(0, container_width - self.event_overlay.width() - margin)
+		self.event_overlay.move(x, self.overlay_label.y())
+
+	def eventFilter(self, obj, event):
+		if obj is self.video_container and event.type() == QEvent.Resize:
+			self._position_event_overlay()
+		return super().eventFilter(obj, event)
 
 	def handle_errors(self):
 		self.play_button.setEnabled(False)

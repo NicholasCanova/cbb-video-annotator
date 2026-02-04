@@ -102,6 +102,8 @@ class ListDisplay(QWidget):
 		self.list_widget.setCurrentRow(row)
 		event = self._visible_events[row]
 
+		self._update_event_info(event)
+
 		self.main_window._begin_edit_event(event)
 		self.main_window.media_player.media_player.pause()
 		self.main_window.media_player.set_position(event.position)
@@ -247,6 +249,8 @@ class ListDisplay(QWidget):
 		self.main_window.media_player.set_position(start)
 
 		self._current_clip_end = end
+		event = self._visible_events[clip["row"]]
+		self._update_event_info(event)
 		player = self.main_window.media_player.media_player
 		player.play()
 		self.main_window.setFocus()
@@ -263,6 +267,11 @@ class ListDisplay(QWidget):
 		self.play_clips_button.setText("View Event Clips")
 		self.main_window.media_player.media_player.pause()
 		self.list_widget.setCurrentRow(-1)
+		self._update_event_info(None)
+
+	def _update_event_info(self, event):
+		self.main_window.media_player.display_event_info(event)
+
 
 	def _handle_position_update(self, position):
 		if not self._playing_clips or self._current_clip_end is None:
