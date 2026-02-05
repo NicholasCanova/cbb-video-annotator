@@ -10,39 +10,104 @@ from utils.list_management import ListManager
 from utils.event_class import Event, ms_to_time
 
 class MainWindow(QMainWindow):
-	QUICK_LABEL_HOTKEYS = {
-		Qt.Key_1: "Drive",
-		Qt.Key_2: "On Ball Screen",
-		Qt.Key_3: "Dribble Handoff",
-		Qt.Key_4: "Fake Handoff",
-		Qt.Key_5: "Off Ball Screen",
-		Qt.Key_6: "Post Up",
-		Qt.Key_7: "Spot Up",
-		Qt.Key_8: "Isolation",
-		Qt.Key_9: "Cut",
-		Qt.Key_0: "Screener Rolling to Rim",
-		Qt.Key_Minus: "Screener Popping to 3P Line",
-		Qt.Key_Equal: "Screener Slipping the Screen",
-		Qt.Key_Q: "Defenders Double Team",
-		Qt.Key_W: "Defenders Switch",
-		Qt.Key_R: "Ballhandler Defender Over Screen",
-		Qt.Key_T: "Ballhandler Defender Under Screen",
-		Qt.Key_Y: "Roller Defender Up on Screen",
-		Qt.Key_U: "Roller Defender Dropping",
-		Qt.Key_I: "Roller Defender Hedging",
-		Qt.Key_J: "2P Shot",
-		Qt.Key_K: "3P Shot",
-		Qt.Key_F: "Free Throw",
-		Qt.Key_G: "Missed Shot",
-		Qt.Key_B: "Made Shot",
-		Qt.Key_C: "Blocked Shot",
-		Qt.Key_V: "Rebound",
-		Qt.Key_N: "Turnover with Steal",
-		Qt.Key_M: "Turnover without Steal",
-		Qt.Key_L: "Foul Committed",
-		Qt.Key_P: "Pass",
-		Qt.Key_D: "Deflection",
+	QUICK_LABEL_COMBOS = {
+		Qt.Key_D: {
+			Qt.Key_R: "Drive",
+			Qt.Key_H: "Dribble Handoff",
+			Qt.Key_T: "Defenders Double Team",
+			Qt.Key_S: "Defenders Switch",
+			Qt.Key_F: "Deflection",
+		},
+		Qt.Key_O: {
+			Qt.Key_B: "On Ball Screen",
+			Qt.Key_F: "Off Ball Screen",
+			Qt.Key_S: "Ballhandler Defender Over Screen",
+		},
+		Qt.Key_U: {
+			Qt.Key_S: "Ballhandler Defender Under Screen",
+		},
+		Qt.Key_F: {
+			Qt.Key_H: "Fake Handoff",
+			Qt.Key_T: "Free Throw",
+			Qt.Key_C: "Foul Committed",
+		},
+		Qt.Key_P: {
+			Qt.Key_U: "Post Up",
+			Qt.Key_S: "Pass",
+		},
+		Qt.Key_S: {
+			Qt.Key_U: "Spot Up",
+			Qt.Key_R: "Screener Rolling to Rim",
+			Qt.Key_P: "Screener Popping to 3P Line",
+			Qt.Key_G: "Screener Ghosts to 3P Line",
+			Qt.Key_S: "Screener Slipping the Screen",
+		},
+		Qt.Key_I: {
+			Qt.Key_S: "Isolation",
+		},
+		Qt.Key_C: {
+			Qt.Key_T: "Cut",
+		},
+		Qt.Key_B: {
+			Qt.Key_S: "Blocked Shot",
+		},
+		Qt.Key_R: {
+			Qt.Key_U: "Roller Defender Up on Screen",
+			Qt.Key_D: "Roller Defender Dropping",
+			Qt.Key_H: "Roller Defender Hedging",
+			Qt.Key_B: "Rebound",
+		},
+		Qt.Key_At: { # Shift + 2
+			Qt.Key_P: "2P Shot",
+		},
+		Qt.Key_NumberSign: { # Shift + 3
+			Qt.Key_P: "3P Shot",
+		},
+		Qt.Key_M: {
+			Qt.Key_S: "Made Shot",
+		},
+		Qt.Key_X: {
+			Qt.Key_S: "Missed Shot",
+		},
+		Qt.Key_T: {
+			Qt.Key_S: "Turnover with Steal",
+			Qt.Key_W: "Turnover without Steal",
+		},
 	}
+	QUICK_LABEL_NAMES = [
+		"Drive",
+		"On Ball Screen",
+		"Dribble Handoff",
+		"Fake Handoff",
+		"Off Ball Screen",
+		"Post Up",
+		"Spot Up",
+		"Isolation",
+		"Cut",
+		"Screener Rolling to Rim",
+		"Screener Popping to 3P Line",
+		"Screener Ghosts to 3P Line",
+		"Screener Slipping the Screen",
+		"Defenders Double Team",
+		"Defenders Switch",
+		"Ballhandler Defender Over Screen",
+		"Ballhandler Defender Under Screen",
+		"Roller Defender Up on Screen",
+		"Roller Defender Dropping",
+		"Roller Defender Hedging",
+		"2P Shot",
+		"3P Shot",
+		"Free Throw",
+		"Made Shot",
+		"Missed Shot",
+		"Blocked Shot",
+		"Rebound",
+		"Turnover with Steal",
+		"Turnover without Steal",
+		"Foul Committed",
+		"Pass",
+		"Deflection",
+	]
 	def __init__(self):
 		super().__init__()
 
@@ -60,6 +125,10 @@ class MainWindow(QMainWindow):
 		self.editing_event = False
 		self.edit_event_obj = None
 		self.edit_event_original = None
+		self._combo_timer = QTimer(self)
+		self._combo_timer.setSingleShot(True)
+		self._combo_timer.timeout.connect(self._clear_combo_prefix)
+		self._pending_combo = None
 
 		# Defining some variables of the window
 		self.title_main_window = "Event Annotator"
@@ -114,8 +183,9 @@ class MainWindow(QMainWindow):
 	def keyPressEvent(self, event):
 		ctrl = False
 
-		if self._handle_quick_label_hotkey(event):
+		if self._handle_multi_key_combo(event):
 			return
+
 
 		# Edit-mode: Left/Right moves the locked event timestamp
 		if self.editing_event and event.key() in (Qt.Key_Left, Qt.Key_Right):
@@ -277,15 +347,34 @@ class MainWindow(QMainWindow):
 				path_label = self.media_player.get_last_label_file()
 				self.list_manager.save_file(path_label, self.half)
 
-	def _handle_quick_label_hotkey(self, event):
-		if event.modifiers() != Qt.NoModifier:
-			return False
-		label = self.QUICK_LABEL_HOTKEYS.get(event.key())
-		if not label:
+	def _handle_multi_key_combo(self, event):
+		if not (event.modifiers() & Qt.ShiftModifier):
+			self._clear_combo_prefix()
 			return False
 
-		self._open_event_window_with_label(label)
-		return True
+		key = event.key()
+		if self._pending_combo is None:
+			if key in self.QUICK_LABEL_COMBOS:
+				self._set_combo_prefix(key)
+				return True
+			return False
+
+		combo_map = self.QUICK_LABEL_COMBOS.get(self._pending_combo, {})
+		label = combo_map.get(key)
+		self._clear_combo_prefix()
+		if label:
+			self._open_event_window_with_label(label)
+			return True
+
+		return False
+
+	def _set_combo_prefix(self, value):
+		self._pending_combo = value
+		self._combo_timer.start(1000)
+
+	def _clear_combo_prefix(self):
+		self._pending_combo = None
+		self._combo_timer.stop()
 
 	def set_frame_rate(self, frame_rate):
 		try:

@@ -124,7 +124,7 @@ class ListDisplay(QWidget):
 			self.list_widget.insertItem(idx, event.to_text())
 
 	def _available_action_list(self):
-		actions = set(self.main_window.QUICK_LABEL_HOTKEYS.values())
+		actions = set(self.main_window.QUICK_LABEL_NAMES)
 		if getattr(self.main_window, "list_manager", None):
 			for event in self.main_window.list_manager.event_list:
 				val = getattr(event, "label", None)
