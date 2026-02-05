@@ -1,5 +1,7 @@
 # Adapted from https://codeloop.org/python-how-to-create-media-player-in-pyqt5/
 import os
+from bisect import bisect_left
+
 from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaMetaData
 from PyQt5.QtMultimediaWidgets import QVideoWidget
@@ -82,6 +84,11 @@ class MediaPlayer(QWidget):
 		self.pass_label.raise_()
 		self.pass_label.hide()
 
+		self.pause_at_events = False
+		self.pause_at_event_frames = []
+		self._next_pause_index = 0
+		self._last_position_frame = 0
+
 		self.video_container.installEventFilter(self)
 
 		# Button to open a new file
@@ -100,6 +107,10 @@ class MediaPlayer(QWidget):
 		self.slider.sliderMoved.connect(self.set_position)
 		self.slider.sliderReleased.connect(self._slider_released)
 
+		self.pause_at_events_button = QPushButton("Pause At Tags")
+		self.pause_at_events_button.setCheckable(True)
+		self.pause_at_events_button.toggled.connect(self._set_pause_at_events)
+
 		#create hbox layout
 		hboxLayout = QHBoxLayout()
 		hboxLayout.setContentsMargins(0,0,0,0)
@@ -107,6 +118,7 @@ class MediaPlayer(QWidget):
 		#set widgets to the hbox layout
 		hboxLayout.addWidget(self.open_file_button)
 		hboxLayout.addWidget(self.play_button)
+		hboxLayout.addWidget(self.pause_at_events_button)
 		hboxLayout.addWidget(self.slider)
 
 		#create vbox layout
@@ -153,6 +165,9 @@ class MediaPlayer(QWidget):
 			self.media_player.pause()
 
 		else:
+			if getattr(self.main_window, "list_display", None):
+				self.main_window.list_display.list_widget.setCurrentRow(-1)
+			self.media_player.play()
 			self.media_player.play()
 
 	def mediastate_changed(self, state):
@@ -170,7 +185,12 @@ class MediaPlayer(QWidget):
 
 	def position_changed(self, position):
 		self.slider.setValue(position)
-		self.update_overlay()
+		frame_number = self.update_overlay()
+		if self.pause_at_events:
+			if frame_number < self._last_position_frame:
+				self._refresh_pause_queue(frame_number)
+			self._maybe_pause_for_event(frame_number)
+		self._last_position_frame = frame_number
 
 	def duration_changed(self, duration):
 		self.slider.setRange(0, duration)
@@ -216,6 +236,7 @@ class MediaPlayer(QWidget):
 		self.overlay_label.raise_()  # Ensure it's on top
 		self._update_passing_events(frame_number)
 		self._position_pass_label()
+		return frame_number
 
 	def display_event_info(self, event):
 		if not event:
@@ -239,6 +260,12 @@ class MediaPlayer(QWidget):
 		self.event_overlay.raise_()
 		self.event_overlay.show()
 		self._position_event_overlay()
+		frame_number = None
+		frame_number = int(getattr(event, "frame", None))
+		if frame_number is not None:
+			self._update_passing_events(frame_number)
+		self._position_pass_label()
+		return frame_number
 
 	def _update_passing_events(self, current_frame):
 		if self.main_window.editing_event or (
@@ -280,6 +307,58 @@ class MediaPlayer(QWidget):
 		x = self.overlay_label.x() + self._pass_label_x
 		y = self.overlay_label.y()
 		self.pass_label.move(x, y)
+
+	def _maybe_pause_for_event(self, current_frame):
+		if (
+			not self.pause_at_events
+			or self.media_player.state() != QMediaPlayer.PlayingState
+			or not self.pause_at_event_frames
+			or self._next_pause_index >= len(self.pause_at_event_frames)
+		):
+			return
+
+		next_frame = self.pause_at_event_frames[self._next_pause_index]
+		if current_frame >= next_frame:
+			self.media_player.pause()
+			if getattr(self.main_window, "list_display", None):
+				self.main_window.list_display.highlight_event_by_frame(next_frame)
+			self._next_pause_index += 1
+
+	def _refresh_pause_queue(self, current_frame=None):
+		manager = getattr(self.main_window, "list_manager", None)
+		if manager:
+			self.pause_at_event_frames = sorted(
+				{getattr(event, "frame", None) for event in manager.event_list if getattr(event, "frame", None) is not None}
+			)
+		else:
+			self.pause_at_event_frames = []
+
+		if current_frame is None:
+			current_frame = self.main_window.position_to_frame(self.media_player.position())
+
+		self._sync_pause_index(current_frame, reset=True)
+
+	def _sync_pause_index(self, frame, reset=False):
+		if not self.pause_at_event_frames:
+			self._next_pause_index = 0
+			return
+
+		target = bisect_left(self.pause_at_event_frames, frame)
+		if reset:
+			self._next_pause_index = target
+		else:
+			self._next_pause_index = max(self._next_pause_index, target)
+
+	def refresh_event_pause_queue(self):
+		self._refresh_pause_queue()
+
+	def _set_pause_at_events(self, enable):
+		self.pause_at_events = enable
+		if enable:
+			current_frame = self.main_window.position_to_frame(self.media_player.position())
+			self._refresh_pause_queue(current_frame)
+		else:
+			self._next_pause_index = 0
 
 	def _position_event_overlay(self):
 		if not self.event_overlay.isVisible():
