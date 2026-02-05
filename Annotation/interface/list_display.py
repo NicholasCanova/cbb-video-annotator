@@ -1,4 +1,8 @@
-from PyQt5.QtWidgets import QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QListWidget, QLineEdit, QCompleter, QApplication, QDialog, QLabel, QTextBrowser, QFrame
+from PyQt5.QtWidgets import (
+	QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QListWidget, QLineEdit,
+	QCompleter, QApplication, QDialog, QLabel, QTextBrowser, QFrame,
+	QTableWidget, QTableWidgetItem, QHeaderView
+)
 from PyQt5.QtCore import Qt, QStringListModel, QEvent, QTimer
 from PyQt5.QtMultimedia import QMediaPlayer
 from PyQt5.QtGui import QFont
@@ -18,6 +22,16 @@ class ListDisplay(QWidget):
 		self._typed_text = ""
 		self._committed_action = ""
 		self._visible_events = []
+
+		# Help dialog refs/state (for expand/shrink)
+		self._help_dialog = None
+		self._help_outer_layout = None
+		self._help_instructions_card = None
+		self._help_hotkeys_card = None
+		self._help_hotkeys_table = None
+		self._help_hotkeys_search = None
+		self._help_expanded = None
+		self._help_hotkeys_target_rows = 5
 
 		# Completer model (action types only)
 		self._actions_model = QStringListModel()
@@ -79,8 +93,6 @@ class ListDisplay(QWidget):
 		self.list_widget.itemDoubleClicked.connect(self._on_event_double_clicked)
 
 		self.main_window.media_player.media_player.positionChanged.connect(self._handle_position_update)
-
-		
 
 	def _on_event_clicked(self, model_index):
 		row = model_index.row()
@@ -149,7 +161,6 @@ class ListDisplay(QWidget):
 		popup = self._completer.popup()
 		popup.setCurrentIndex(popup.model().index(-1, -1))
 
-
 	def _commit_action_from_dropdown(self, text):
 		# Commit the chosen action and filter event list
 		action = (text or "").strip()
@@ -185,7 +196,6 @@ class ListDisplay(QWidget):
 	def _on_search_text_edited(self, text):
 		self._typed_text = (text or "")
 		self._show_dropdown()
-
 
 	def _clear_filter(self):
 		self._typed_text = ""
@@ -324,11 +334,9 @@ class ListDisplay(QWidget):
 		target = self._committed_action.strip().lower()
 		return [e for e in events if str(getattr(e, "label", None)).strip().lower() == target]
 
-
 	def eventFilter(self, obj, event):
 		if obj is self.search_input and event.type() == QEvent.MouseButtonPress:
 			self.main_window._end_edit_event(keep_focus=True)
-			# Show dropdown on click into the bar
 			out = super().eventFilter(obj, event)
 			self._typed_text = (self.search_input.text() or "").strip()
 			self._show_dropdown()
@@ -342,7 +350,6 @@ class ListDisplay(QWidget):
 				self._show_dropdown()
 				popup = self._completer.popup()
 				if popup and popup.isVisible():
-					# Forward the key to popup for normal navigation
 					QApplication.sendEvent(popup, event)
 					return True
 				return False
@@ -363,12 +370,378 @@ class ListDisplay(QWidget):
 
 		return super().eventFilter(obj, event)
 
+	def _help_subtitle(self):
+		if self.main_window.editing_event:
+			return "Editing Mode"
+		if self._playing_clips:
+			return "View Clips Mode"
+		return "Normal Mode"
+
+	def _all_hotkey_rows(self):
+		return [
+			("Shift + D + R", "Drive"),
+			("Shift + D + H", "Dribble Handoff"),
+			("Shift + D + T", "Defenders Double Team"),
+			("Shift + D + S", "Defenders Switch"),
+			("Shift + D + F", "Deflection"),
+			("Shift + O + B", "On Ball Screen"),
+			("Shift + O + F", "Off Ball Screen"),
+			("Shift + O + S", "Ballhandler Defender Over Screen"),
+			("Shift + U + S", "Ballhandler Defender Under Screen"),
+			("Shift + F + H", "Fake Handoff"),
+			("Shift + F + T", "Free Throw"),
+			("Shift + F + C", "Foul Committed"),
+			("Shift + P + U", "Post Up"),
+			("Shift + P + S", "Pass"),
+			("Shift + S + U", "Spot Up"),
+			("Shift + S + R", "Screener Rolling to Rim"),
+			("Shift + S + P", "Screener Popping to 3P Line"),
+			("Shift + S + G", "Screener Ghosts to 3P Line"),
+			("Shift + S + S", "Screener Slipping the Screen"),
+			("Shift + I + S", "Isolation"),
+			("Shift + C + T", "Cut"),
+			("Shift + B + S", "Blocked Shot"),
+			("Shift + R + U", "Roller Defender Up on Screen"),
+			("Shift + R + D", "Roller Defender Dropping"),
+			("Shift + R + H", "Roller Defender Hedging"),
+			("Shift + R + B", "Rebound"),
+			("Shift + 2 + P (@ + P)", "2P Shot"),
+			("Shift + 3 + P (# + P)", "3P Shot"),
+			("Shift + M + S", "Made Shot"),
+			("Shift + X + S", "Missed Shot"),
+			("Shift + T + S", "Turnover with Steal"),
+			("Shift + T + W", "Turnover without Steal"),
+		]
+
+	def _filter_hotkey_rows(self, query):
+		q = (query or "").strip().lower()
+		rows = self._all_hotkey_rows()
+		if not q:
+			return rows
+		return [(hk, desc) for hk, desc in rows if (q in hk.lower() or q in desc.lower())]
+
+	def _build_static_help_html(self):
+		mode = self._help_subtitle()
+
+		common_style = """
+		<style>
+			body { font-family: Arial, Helvetica, sans-serif; margin: 0; }
+			.card {
+				background: #141826;
+				border: 1px solid #2a3142;
+				border-radius: 12px;
+				padding: 12px 12px;
+				margin-bottom: 10px;
+			}
+			.cardTitle {
+				font-size: 16px;
+				font-weight: 700;
+				margin-bottom: 10px;
+				color: #ffffff;
+			}
+			.cardBody { color: #cfd6e6; line-height: 1.45; }
+			code {
+				background: #0f1117;
+				border: 1px solid #2a3142;
+				padding: 1px 6px;
+				border-radius: 8px;
+				color: #e6e9f2;
+			}
+			ul { margin: 0; padding-left: 18px; }
+			li { margin: 4px 0; }
+		</style>
+		"""
+
+		if mode == "Editing Mode":
+			body = """
+			<div class="card">
+				<div class="cardTitle">Editing Mode</div>
+				<div class="cardBody">
+					<ul>
+						<li>Use Left/Right (with Shift/Command modifiers) to fine-tune the locked frame.</li>
+						<li>Press <b>Enter</b> to lock it in and return to normal playback.</li>
+						<li>Press <b>Command + Enter</b> to reopen Event Selection.</li>
+						<li>Press <b>Esc</b> to cancel editing and revert the previous annotation.</li>
+					</ul>
+				</div>
+			</div>
+			"""
+			return f"<html><head>{common_style}</head><body>{body}</body></html>"
+
+		if mode == "View Clips Mode":
+			body = """
+			<div class="card">
+				<div class="cardTitle">View Clips Mode</div>
+				<div class="cardBody">
+					<ul>
+						<li>Single-click an event to jump to that clip in the sequence.</li>
+						<li>Double-click (or <b>Enter</b>) to stop clip playback and edit the highlighted event.</li>
+						<li>The top-right overlay shows the current event.</li>
+					</ul>
+				</div>
+			</div>
+			"""
+			return f"<html><head>{common_style}</head><body>{body}</body></html>"
+
+		# Normal Mode
+		body = """
+		<div class="card">
+			<div class="cardTitle">Getting Started</div>
+			<div class="cardBody">
+				<ul>
+					<li>Click <b>Open Video</b> to load <code>1.mov</code> with <code>Labels-v2.json</code> in the same folder.</li>
+					<li>Space toggles play/pause. Arrow keys step. Use modifiers for bigger jumps (Shift = 5 frames, Command = 10, Shift+Command = 50).</li>
+					<li>A = ×1 speed, Z = ×2, E = ×4.</li>
+				</ul>
+			</div>
+		</div>
+
+		<div class="card">
+			<div class="cardTitle">Editing Existing Events</div>
+			<div class="cardBody">
+				<ul>
+					<li>Select an event, then hit <b>ENTER</b> to edit what frame it is tagged on or change the label.</li>
+					<li>Delete an annotation by selecting it and pressing <b>DELETE</b>.</li>
+				</ul>
+			</div>
+		</div>
+
+		<div class="card">
+			<div class="cardTitle">Creating New Events</div>
+			<div class="cardBody">
+				<ul>
+					<li>Navigate to the frame where the event occurs.</li>
+					<li>Press <b>ENTER</b> to create a generic event, or use a hotkey below to create a specific action.</li>
+				</ul>
+			</div>
+		</div>
+		"""
+		return f"<html><head>{common_style}</head><body>{body}</body></html>"
+
+
+
+	def _build_instructions_card(self, parent_dialog):
+		card = QFrame(parent_dialog)
+		card.setObjectName("helpCard")
+
+		card_layout = QVBoxLayout(card)
+		card_layout.setContentsMargins(12, 12, 12, 12)
+		card_layout.setSpacing(10)
+
+		# header row
+		header_row = QHBoxLayout()
+		header_row.setContentsMargins(0, 0, 0, 0)
+
+		title = QLabel("Instructions", card)
+		title.setObjectName("helpCardTitle")
+
+		expand_btn = QPushButton("Expand", card)
+		expand_btn.setObjectName("cardExpandBtn")
+		expand_btn.setCheckable(True)
+		expand_btn.clicked.connect(lambda: self._toggle_help_expand("instructions"))
+
+		def _sync_btn():
+			expand_btn.setText("Shrink" if expand_btn.isChecked() else "Expand")
+		expand_btn.toggled.connect(lambda _: _sync_btn())
+		_sync_btn()
+
+		header_row.addWidget(title)
+		header_row.addStretch(1)
+		header_row.addWidget(expand_btn)
+		card_layout.addLayout(header_row)
+
+		body = QTextBrowser(card)
+		body.setOpenExternalLinks(True)
+		body.setObjectName("helpBody")
+		body.setHtml(self._build_static_help_html())
+		card_layout.addWidget(body, 1)
+
+		self._help_instructions_card = card
+		return card
+
+	def _build_hotkeys_card(self, parent_dialog):
+		card = QFrame(parent_dialog)
+		card.setObjectName("helpCard")
+
+		card_layout = QVBoxLayout(card)
+		card_layout.setContentsMargins(12, 12, 12, 12)
+		card_layout.setSpacing(10)
+
+		# --- Card header row (title + expand button) ---
+		header_row = QHBoxLayout()
+		header_row.setContentsMargins(0, 0, 0, 0)
+
+		title = QLabel("Action Creation Hotkeys", card)
+		title.setObjectName("helpCardTitle")
+
+		expand_btn = QPushButton("Expand", card)
+		expand_btn.setObjectName("cardExpandBtn")
+		expand_btn.setCheckable(True)
+		expand_btn.clicked.connect(lambda: self._toggle_help_expand("hotkeys"))
+
+		def _sync_btn():
+			expand_btn.setText("Shrink" if expand_btn.isChecked() else "Expand")
+		expand_btn.toggled.connect(lambda _: _sync_btn())
+		_sync_btn()
+
+		header_row.addWidget(title)
+		header_row.addStretch(1)
+		header_row.addWidget(expand_btn)
+		card_layout.addLayout(header_row)
+
+		search = QLineEdit(card)
+		search.setPlaceholderText("Search hotkeys (e.g. drive, rebound, shift + d)")
+		search.setClearButtonEnabled(True)
+		search.setObjectName("hotkeySearch")
+		card_layout.addWidget(search)
+
+		table = QTableWidget(card)
+		table.setColumnCount(2)
+		table.setHorizontalHeaderLabels(["Hotkey", "Action"])
+		table.verticalHeader().setVisible(False)
+		table.setShowGrid(False)
+		table.setSelectionMode(QTableWidget.NoSelection)
+		table.setEditTriggers(QTableWidget.NoEditTriggers)
+		table.setFocusPolicy(Qt.NoFocus)
+		table.setObjectName("hotkeyTable")
+
+		h = table.horizontalHeader()
+		h.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+		h.setSectionResizeMode(1, QHeaderView.Stretch)
+		h.setVisible(False)
+
+		# Default compact height (~5 rows)
+		row_h = table.sizeHintForRow(0)
+		if row_h <= 0:
+			row_h = 26
+		compact_height = self._help_hotkeys_target_rows * row_h + 10
+		table.setMinimumHeight(compact_height)
+		table.setMaximumHeight(compact_height)
+
+		card_layout.addWidget(table, 1)
+
+		self._help_hotkeys_card = card
+		self._help_hotkeys_table = table
+		self._help_hotkeys_search = search
+
+		def populate(q):
+			rows = self._filter_hotkey_rows(q)
+
+			# In compact mode, pad to at least 5 rows so height is stable
+			if self._help_expanded != "hotkeys" and len(rows) < self._help_hotkeys_target_rows:
+				rows = rows + [("", "")] * (self._help_hotkeys_target_rows - len(rows))
+
+			table.setRowCount(len(rows))
+			for r, (hk, desc) in enumerate(rows):
+				item_hk = QTableWidgetItem(hk)
+				item_desc = QTableWidgetItem(desc)
+
+				if hk:
+					f = item_hk.font()
+					f.setBold(True)
+					item_hk.setFont(f)
+
+				item_hk.setFlags(Qt.ItemIsEnabled)
+				item_desc.setFlags(Qt.ItemIsEnabled)
+
+				table.setItem(r, 0, item_hk)
+				table.setItem(r, 1, item_desc)
+
+		search.textChanged.connect(populate)
+		populate("")
+
+		return card
+
+	def _toggle_help_expand(self, which):
+		"""
+		- Expanding hotkeys: moves hotkeys card to top, hides instructions, makes table fill space
+		- Expanding instructions: moves instructions to top, hides hotkeys
+		- Clicking again shrinks back to normal
+		"""
+		if not self._help_outer_layout or not self._help_instructions_card or not self._help_hotkeys_card:
+			return
+
+		def _remove_widget(w):
+			for i in range(self._help_outer_layout.count()):
+				item = self._help_outer_layout.itemAt(i)
+				if item and item.widget() is w:
+					self._help_outer_layout.takeAt(i)
+					return
+
+		# SHRINK back to normal if clicking the same one
+		if self._help_expanded == which:
+			self._help_expanded = None
+
+			self._help_instructions_card.show()
+			self._help_hotkeys_card.show()
+
+			# restore order: instructions then hotkeys
+			_remove_widget(self._help_instructions_card)
+			_remove_widget(self._help_hotkeys_card)
+
+			# index 0 is the header frame; insert below it
+			self._help_outer_layout.insertWidget(1, self._help_instructions_card, 1)
+			self._help_outer_layout.insertWidget(2, self._help_hotkeys_card, 0)
+
+			# restore hotkeys compact height
+			if self._help_hotkeys_table:
+				row_h = self._help_hotkeys_table.sizeHintForRow(0)
+				if row_h <= 0:
+					row_h = 26
+				compact_h = self._help_hotkeys_target_rows * row_h + 10
+				self._help_hotkeys_table.setMinimumHeight(compact_h)
+				self._help_hotkeys_table.setMaximumHeight(compact_h)
+
+			# refresh rows to re-pad blanks if needed
+			if self._help_hotkeys_search:
+				self._help_hotkeys_search.setText(self._help_hotkeys_search.text())
+
+			return
+
+		# expand selected
+		self._help_expanded = which
+
+		if which == "hotkeys":
+			# show hotkeys only
+			self._help_instructions_card.hide()
+			self._help_hotkeys_card.show()
+
+			# move hotkeys card to top (right under header)
+			_remove_widget(self._help_hotkeys_card)
+			self._help_outer_layout.insertWidget(1, self._help_hotkeys_card, 1)
+
+			# let hotkeys table grow to fill space
+			if self._help_hotkeys_table:
+				self._help_hotkeys_table.setMinimumHeight(0)
+				self._help_hotkeys_table.setMaximumHeight(16777215)
+
+			# refresh rows to remove padding blanks
+			if self._help_hotkeys_search:
+				self._help_hotkeys_search.setText(self._help_hotkeys_search.text())
+
+		elif which == "instructions":
+			# show instructions only
+			self._help_hotkeys_card.hide()
+			self._help_instructions_card.show()
+
+			# move instructions card to top
+			_remove_widget(self._help_instructions_card)
+			self._help_outer_layout.insertWidget(1, self._help_instructions_card, 1)
+
 	def _show_help(self):
+		# reset dialog-scoped refs/state
+		self._help_dialog = None
+		self._help_outer_layout = None
+		self._help_instructions_card = None
+		self._help_hotkeys_card = None
+		self._help_hotkeys_table = None
+		self._help_hotkeys_search = None
+		self._help_expanded = None
+
 		dialog = QDialog(self)
 		dialog.setWindowTitle("Help")
 		dialog.setModal(True)
 
-		# Outer layout
 		outer = QVBoxLayout(dialog)
 		outer.setContentsMargins(14, 14, 14, 14)
 		outer.setSpacing(10)
@@ -395,12 +768,12 @@ class ListDisplay(QWidget):
 
 		outer.addWidget(header)
 
-		# Body
-		body = QTextBrowser(dialog)
-		body.setOpenExternalLinks(True)
-		body.setObjectName("helpBody")
-		body.setHtml(self._help_html_for_mode())
-		outer.addWidget(body, 1)
+		# Cards
+		instructions_card = self._build_instructions_card(dialog)
+		hotkeys_card = self._build_hotkeys_card(dialog)
+
+		outer.addWidget(instructions_card, 1)
+		outer.addWidget(hotkeys_card, 0)
 
 		# Footer buttons
 		footer = QHBoxLayout()
@@ -413,230 +786,80 @@ class ListDisplay(QWidget):
 		footer.addWidget(close_btn)
 		outer.addLayout(footer)
 
+		# Store refs for expand behavior
+		self._help_dialog = dialog
+		self._help_outer_layout = outer
+		self._help_instructions_card = instructions_card
+		self._help_hotkeys_card = hotkeys_card
+
 		# Styling
 		dialog.setStyleSheet("""
-				QDialog {
-						background: #111318;
-				}
-				#helpHeader {
-						background: #1b1f2a;
-						border: 1px solid #2a3142;
-						border-radius: 10px;
-				}
-				#helpSubtitle {
-						color: #a9b1c6;
-						font-size: 12px;
-				}
-				#helpBody {
-						background: #0f1117;
-						border: 1px solid #2a3142;
-						border-radius: 10px;
-						padding: 10px;
-						color: #e6e9f2;
-						font-size: 13px;
-				}
-				#helpBody a { color: #7aa2ff; text-decoration: none; }
-				#helpBody a:hover { text-decoration: underline; }
-				QPushButton {
-						padding: 6px 12px;
-						border-radius: 8px;
-						background: #1b1f2a;
-						border: 1px solid #2a3142;
-						color: #e6e9f2;
-				}
-				QPushButton:hover {
-						background: #22283a;
-				}
+			QDialog {
+				background: #111318;
+			}
+			#helpHeader {
+				background: #1b1f2a;
+				border: 1px solid #2a3142;
+				border-radius: 10px;
+			}
+			#helpSubtitle {
+				color: #a9b1c6;
+				font-size: 12px;
+			}
+
+			#helpCard {
+				background: #141826;
+				border: 1px solid #2a3142;
+				border-radius: 12px;
+			}
+			#helpCardTitle {
+				color: #ffffff;
+				font-size: 16px;
+				font-weight: 700;
+			}
+			#cardExpandBtn {
+				padding: 4px 10px;
+				border-radius: 8px;
+				background: #1b1f2a;
+				border: 1px solid #2a3142;
+				color: #e6e9f2;
+			}
+			#cardExpandBtn:hover { background: #22283a; }
+
+			#helpBody {
+				background: #0f1117;
+				border: 1px solid #2a3142;
+				border-radius: 10px;
+				padding: 10px;
+				color: #e6e9f2;
+				font-size: 13px;
+			}
+
+			#hotkeySearch {
+				background: #0f1117;
+				border: 1px solid #2a3142;
+				border-radius: 10px;
+				padding: 6px 10px;
+				color: #e6e9f2;
+			}
+			#hotkeyTable {
+				background: #0f1117;
+				border: 1px solid #2a3142;
+				border-radius: 10px;
+				color: #e6e9f2;
+			}
+
+			QPushButton {
+				padding: 6px 12px;
+				border-radius: 8px;
+				background: #1b1f2a;
+				border: 1px solid #2a3142;
+				color: #e6e9f2;
+			}
+			QPushButton:hover {
+				background: #22283a;
+			}
 		""")
 
-		dialog.resize(640, 520)
+		dialog.resize(720, 620)
 		dialog.exec_()
-
-	def _help_subtitle(self):
-			if self.main_window.editing_event:
-					return "Editing Mode"
-			if self._playing_clips:
-					return "View Clips Mode"
-			return "Normal Mode"
-
-	def _help_html_for_mode(self):
-			mode = self._help_subtitle()
-
-			# You can expand these over time
-			if mode == "Editing Mode":
-					sections = [
-							("What you can do",
-							["Use Left/Right (with Shift/Command modifiers) to fine-tune the locked frame.",
-								"Press Enter to lock it in and return to normal playback.",
-								"Press Command + Enter to reopen Event Selection.",
-								"Press Esc to cancel editing and revert the previous annotation."]),
-					]
-					return self._render_help_page(mode, sections)
-
-			if mode == "View Clips Mode":
-					sections = [
-							("Playback controls",
-							["Single-click an event to jump to that clip in the sequence.",
-								"Double-click (or Enter) to stop clip playback and edit the highlighted event.",
-								"Top-right overlay always shows the current event."]),
-					]
-					return self._render_help_page(mode, sections)
-
-			# Normal Mode (includes hotkeys)
-			# Normal usage help (no page title)
-			sections = [
-					("Getting Started",
-					["Click <b>Open Video</b> to load <code>1.mov</code> with <code>Labels-v2.json</code> in the same folder.",
-						"Space toggles play/pause. Arrow keys step. Use modifiers for bigger jumps (Shift = 5 frames, Command = 10, Shift+Command = 50).",
-						"A = ×1 speed, Z = ×2, E = ×4."]),
-					("Editing Existing Events",
-					["Select an event, then hit <b>ENTER</b> to edit what frame it is tagged on or change the label.",
-						"Delete an annotation by selecting it and pressing <b>DELETE</b>."]),
-					("Creating New Events",
-					["Navigate to the frame where the event occurs.",
-      			"Press <b>ENTER</b> to create a generic event, or use one of the hotkeys below to create a specific action."]),
-					("Hotkeys",
-					[self._render_hotkeys_table_html()]),
-			]
-
-			# pass empty title so no top header text appears
-			return self._render_help_page("", sections)
-
-
-	def _render_help_page(self, title, sections):
-			# Simple "card" layout using HTML blocks.
-			cards = []
-			for heading, bullets in sections:
-					items = []
-					for b in bullets:
-							# allow raw HTML blocks (like the hotkey table) by not wrapping if it looks like HTML
-							if "<table" in b or "<div" in b:
-									items.append(b)
-							else:
-									items.append(f"<li>{b}</li>")
-					body = "".join(items)
-					if not body.strip().startswith("<"):
-							body = f"<ul>{body}</ul>"
-					cards.append(f"""
-							<div class="card">
-								<div class="cardTitle">{heading}</div>
-								<div class="cardBody">{body}</div>
-							</div>
-					""")
-
-			return f"""
-			<html>
-			<head>
-				<style>
-					body {{
-						font-family: Arial, Helvetica, sans-serif;
-						margin: 0;
-					}}
-					.pageTitle {{
-						font-size: 16px;
-						font-weight: 700;
-						margin: 4px 2px 12px 2px;
-						color: #e6e9f2;
-					}}
-					.card {{
-						background: #141826;
-						border: 1px solid #2a3142;
-						border-radius: 12px;
-						padding: 12px 12px;
-						margin-bottom: 10px;
-					}}
-					.cardTitle {{
-						font-size: 16px;
-						font-weight: 700;
-						margin-bottom: 10px;
-						color: #ffffff;
-					}}
-					.cardBody {{
-						color: #cfd6e6;
-						line-height: 1.45;
-					}}
-					code {{
-						background: #0f1117;
-						border: 1px solid #2a3142;
-						padding: 1px 6px;
-						border-radius: 8px;
-						color: #e6e9f2;
-					}}
-					ul {{
-						margin: 0;
-						padding-left: 18px;
-					}}
-					li {{ margin: 4px 0; }}
-					table.hotkeys {{
-						width: 100%;
-						border-collapse: collapse;
-						margin-top: 6px;
-					}}
-					table.hotkeys td {{
-						padding: 6px 8px;
-						border-top: 1px solid #2a3142;
-						vertical-align: top;
-					}}
-					.hk {{
-						white-space: nowrap;
-						color: #e6e9f2;
-						font-weight: 600;
-					}}
-					.desc {{
-						color: #cfd6e6;
-					}}
-				</style>
-			</head>
-			<body>
-				<div class="pageTitle">{title}</div>
-				{''.join(cards)}
-			</body>
-			</html>
-			"""
-
-	def _render_hotkeys_table_html(self):
-			# Put your hotkeys in data so it's easy to maintain.
-			rows = [
-					("Shift + D + R", "Drive"),
-					("Shift + D + H", "Dribble Handoff"),
-					("Shift + D + T", "Defenders Double Team"),
-					("Shift + D + S", "Defenders Switch"),
-					("Shift + D + F", "Deflection"),
-					("Shift + O + B", "On Ball Screen"),
-					("Shift + O + F", "Off Ball Screen"),
-					("Shift + O + S", "Ballhandler Defender Over Screen"),
-					("Shift + U + S", "Ballhandler Defender Under Screen"),
-					("Shift + F + H", "Fake Handoff"),
-					("Shift + F + T", "Free Throw"),
-					("Shift + F + C", "Foul Committed"),
-					("Shift + P + U", "Post Up"),
-					("Shift + P + S", "Pass"),
-					("Shift + S + U", "Spot Up"),
-					("Shift + S + R", "Screener Rolling to Rim"),
-					("Shift + S + P", "Screener Popping to 3P Line"),
-					("Shift + S + G", "Screener Ghosts to 3P Line"),
-					("Shift + S + S", "Screener Slipping the Screen"),
-					("Shift + I + S", "Isolation"),
-					("Shift + C + T", "Cut"),
-					("Shift + B + S", "Blocked Shot"),
-					("Shift + R + U", "Roller Defender Up on Screen"),
-					("Shift + R + D", "Roller Defender Dropping"),
-					("Shift + R + H", "Roller Defender Hedging"),
-					("Shift + R + B", "Rebound"),
-					("Shift + 2 + P (@ + P)", "2P Shot"),
-					("Shift + 3 + P (# + P)", "3P Shot"),
-					("Shift + M + S", "Made Shot"),
-					("Shift + X + S", "Missed Shot"),
-					("Shift + T + S", "Turnover with Steal"),
-					("Shift + T + W", "Turnover without Steal"),
-			]
-
-			trs = []
-			for hk, desc in rows:
-					trs.append(f"<tr><td class='hk'>{hk}</td><td class='desc'>{desc}</td></tr>")
-
-			return f"""
-				<table class="hotkeys">
-					{''.join(trs)}
-				</table>
-			"""
