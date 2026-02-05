@@ -1,6 +1,7 @@
-from PyQt5.QtWidgets import QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QListWidget, QLineEdit, QCompleter, QApplication
+from PyQt5.QtWidgets import QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QListWidget, QLineEdit, QCompleter, QApplication, QDialog, QLabel, QTextBrowser, QFrame
 from PyQt5.QtCore import Qt, QStringListModel, QEvent, QTimer
 from PyQt5.QtMultimedia import QMediaPlayer
+from PyQt5.QtGui import QFont
 
 
 class ListDisplay(QWidget):
@@ -62,6 +63,10 @@ class ListDisplay(QWidget):
 		self.play_clips_button = QPushButton("View Event Clips")
 		self.play_clips_button.clicked.connect(self._toggle_play_clips)
 		self.layout.addWidget(self.play_clips_button)
+
+		self.help_button = QPushButton("Help")
+		self.help_button.clicked.connect(self._show_help)
+		self.layout.addWidget(self.help_button)
 
 		self._clip_sequence = []
 		self._current_clip_index = 0
@@ -215,7 +220,7 @@ class ListDisplay(QWidget):
 
 		self._playing_clips = True
 		self._current_clip_index = 0
-		self.play_clips_button.setText("Stop Clips")
+		self.play_clips_button.setText("Stop Viewing Clips")
 		self._play_next_clip()
 
 	def _build_clip_sequence(self, events):
@@ -274,7 +279,6 @@ class ListDisplay(QWidget):
 
 	def _update_event_info(self, event):
 		self.main_window.media_player.display_event_info(event)
-
 
 	def _handle_position_update(self, position):
 		if not self._playing_clips or self._current_clip_end is None:
@@ -358,3 +362,281 @@ class ListDisplay(QWidget):
 				return True
 
 		return super().eventFilter(obj, event)
+
+	def _show_help(self):
+		dialog = QDialog(self)
+		dialog.setWindowTitle("Help")
+		dialog.setModal(True)
+
+		# Outer layout
+		outer = QVBoxLayout(dialog)
+		outer.setContentsMargins(14, 14, 14, 14)
+		outer.setSpacing(10)
+
+		# Header bar
+		header = QFrame(dialog)
+		header.setObjectName("helpHeader")
+		header_layout = QHBoxLayout(header)
+		header_layout.setContentsMargins(12, 10, 12, 10)
+
+		title = QLabel("Help", header)
+		title_font = QFont()
+		title_font.setPointSize(14)
+		title_font.setBold(True)
+		title.setFont(title_font)
+
+		subtitle = QLabel(self._help_subtitle(), header)
+		subtitle.setObjectName("helpSubtitle")
+		subtitle.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+		header_layout.addWidget(title)
+		header_layout.addStretch(1)
+		header_layout.addWidget(subtitle)
+
+		outer.addWidget(header)
+
+		# Body
+		body = QTextBrowser(dialog)
+		body.setOpenExternalLinks(True)
+		body.setObjectName("helpBody")
+		body.setHtml(self._help_html_for_mode())
+		outer.addWidget(body, 1)
+
+		# Footer buttons
+		footer = QHBoxLayout()
+		footer.addStretch(1)
+
+		close_btn = QPushButton("Close", dialog)
+		close_btn.clicked.connect(dialog.accept)
+		close_btn.setDefault(True)
+
+		footer.addWidget(close_btn)
+		outer.addLayout(footer)
+
+		# Styling
+		dialog.setStyleSheet("""
+				QDialog {
+						background: #111318;
+				}
+				#helpHeader {
+						background: #1b1f2a;
+						border: 1px solid #2a3142;
+						border-radius: 10px;
+				}
+				#helpSubtitle {
+						color: #a9b1c6;
+						font-size: 12px;
+				}
+				#helpBody {
+						background: #0f1117;
+						border: 1px solid #2a3142;
+						border-radius: 10px;
+						padding: 10px;
+						color: #e6e9f2;
+						font-size: 13px;
+				}
+				#helpBody a { color: #7aa2ff; text-decoration: none; }
+				#helpBody a:hover { text-decoration: underline; }
+				QPushButton {
+						padding: 6px 12px;
+						border-radius: 8px;
+						background: #1b1f2a;
+						border: 1px solid #2a3142;
+						color: #e6e9f2;
+				}
+				QPushButton:hover {
+						background: #22283a;
+				}
+		""")
+
+		dialog.resize(640, 520)
+		dialog.exec_()
+
+	def _help_subtitle(self):
+			if self.main_window.editing_event:
+					return "Editing Mode"
+			if self._playing_clips:
+					return "View Clips Mode"
+			return "Normal Mode"
+
+	def _help_html_for_mode(self):
+			mode = self._help_subtitle()
+
+			# You can expand these over time
+			if mode == "Editing Mode":
+					sections = [
+							("What you can do",
+							["Use Left/Right (with Shift/Command modifiers) to fine-tune the locked frame.",
+								"Press Enter to lock it in and return to normal playback.",
+								"Press Command + Enter to reopen Event Selection.",
+								"Press Esc to cancel editing and revert the previous annotation."]),
+					]
+					return self._render_help_page(mode, sections)
+
+			if mode == "View Clips Mode":
+					sections = [
+							("Playback controls",
+							["Single-click an event to jump to that clip in the sequence.",
+								"Double-click (or Enter) to stop clip playback and edit the highlighted event.",
+								"Top-right overlay always shows the current event."]),
+					]
+					return self._render_help_page(mode, sections)
+
+			# Normal Mode (includes hotkeys)
+			# Normal usage help (no page title)
+			sections = [
+					("Getting Started",
+					["Click <b>Open Video</b> to load <code>1.mov</code> with <code>Labels-v2.json</code> in the same folder.",
+						"Space toggles play/pause. Arrow keys step. Use modifiers for bigger jumps (Shift = 5 frames, Command = 10, Shift+Command = 50).",
+						"A = ×1 speed, Z = ×2, E = ×4."]),
+					("Editing Existing Events",
+					["Select an event, then hit <b>ENTER</b> to edit what frame it is tagged on or change the label.",
+						"Delete an annotation by selecting it and pressing <b>DELETE</b>."]),
+					("Creating New Events",
+					["Navigate to the frame where the event occurs.",
+      			"Press <b>ENTER</b> to create a generic event, or use one of the hotkeys below to create a specific action."]),
+					("Hotkeys",
+					[self._render_hotkeys_table_html()]),
+			]
+
+			# pass empty title so no top header text appears
+			return self._render_help_page("", sections)
+
+
+	def _render_help_page(self, title, sections):
+			# Simple "card" layout using HTML blocks.
+			cards = []
+			for heading, bullets in sections:
+					items = []
+					for b in bullets:
+							# allow raw HTML blocks (like the hotkey table) by not wrapping if it looks like HTML
+							if "<table" in b or "<div" in b:
+									items.append(b)
+							else:
+									items.append(f"<li>{b}</li>")
+					body = "".join(items)
+					if not body.strip().startswith("<"):
+							body = f"<ul>{body}</ul>"
+					cards.append(f"""
+							<div class="card">
+								<div class="cardTitle">{heading}</div>
+								<div class="cardBody">{body}</div>
+							</div>
+					""")
+
+			return f"""
+			<html>
+			<head>
+				<style>
+					body {{
+						font-family: Arial, Helvetica, sans-serif;
+						margin: 0;
+					}}
+					.pageTitle {{
+						font-size: 16px;
+						font-weight: 700;
+						margin: 4px 2px 12px 2px;
+						color: #e6e9f2;
+					}}
+					.card {{
+						background: #141826;
+						border: 1px solid #2a3142;
+						border-radius: 12px;
+						padding: 12px 12px;
+						margin-bottom: 10px;
+					}}
+					.cardTitle {{
+						font-size: 16px;
+						font-weight: 700;
+						margin-bottom: 10px;
+						color: #ffffff;
+					}}
+					.cardBody {{
+						color: #cfd6e6;
+						line-height: 1.45;
+					}}
+					code {{
+						background: #0f1117;
+						border: 1px solid #2a3142;
+						padding: 1px 6px;
+						border-radius: 8px;
+						color: #e6e9f2;
+					}}
+					ul {{
+						margin: 0;
+						padding-left: 18px;
+					}}
+					li {{ margin: 4px 0; }}
+					table.hotkeys {{
+						width: 100%;
+						border-collapse: collapse;
+						margin-top: 6px;
+					}}
+					table.hotkeys td {{
+						padding: 6px 8px;
+						border-top: 1px solid #2a3142;
+						vertical-align: top;
+					}}
+					.hk {{
+						white-space: nowrap;
+						color: #e6e9f2;
+						font-weight: 600;
+					}}
+					.desc {{
+						color: #cfd6e6;
+					}}
+				</style>
+			</head>
+			<body>
+				<div class="pageTitle">{title}</div>
+				{''.join(cards)}
+			</body>
+			</html>
+			"""
+
+	def _render_hotkeys_table_html(self):
+			# Put your hotkeys in data so it's easy to maintain.
+			rows = [
+					("Shift + D + R", "Drive"),
+					("Shift + D + H", "Dribble Handoff"),
+					("Shift + D + T", "Defenders Double Team"),
+					("Shift + D + S", "Defenders Switch"),
+					("Shift + D + F", "Deflection"),
+					("Shift + O + B", "On Ball Screen"),
+					("Shift + O + F", "Off Ball Screen"),
+					("Shift + O + S", "Ballhandler Defender Over Screen"),
+					("Shift + U + S", "Ballhandler Defender Under Screen"),
+					("Shift + F + H", "Fake Handoff"),
+					("Shift + F + T", "Free Throw"),
+					("Shift + F + C", "Foul Committed"),
+					("Shift + P + U", "Post Up"),
+					("Shift + P + S", "Pass"),
+					("Shift + S + U", "Spot Up"),
+					("Shift + S + R", "Screener Rolling to Rim"),
+					("Shift + S + P", "Screener Popping to 3P Line"),
+					("Shift + S + G", "Screener Ghosts to 3P Line"),
+					("Shift + S + S", "Screener Slipping the Screen"),
+					("Shift + I + S", "Isolation"),
+					("Shift + C + T", "Cut"),
+					("Shift + B + S", "Blocked Shot"),
+					("Shift + R + U", "Roller Defender Up on Screen"),
+					("Shift + R + D", "Roller Defender Dropping"),
+					("Shift + R + H", "Roller Defender Hedging"),
+					("Shift + R + B", "Rebound"),
+					("Shift + 2 + P (@ + P)", "2P Shot"),
+					("Shift + 3 + P (# + P)", "3P Shot"),
+					("Shift + M + S", "Made Shot"),
+					("Shift + X + S", "Missed Shot"),
+					("Shift + T + S", "Turnover with Steal"),
+					("Shift + T + W", "Turnover without Steal"),
+			]
+
+			trs = []
+			for hk, desc in rows:
+					trs.append(f"<tr><td class='hk'>{hk}</td><td class='desc'>{desc}</td></tr>")
+
+			return f"""
+				<table class="hotkeys">
+					{''.join(trs)}
+				</table>
+			"""
