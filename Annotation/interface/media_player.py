@@ -212,7 +212,7 @@ class MediaPlayer(QWidget):
 			time_str = ms_to_time(position)
 
 		parts = [label]
-		if event.team:
+		if event.team and not event.team == "None":
 			parts.append(event.team)
 		parts.append(f"{time_str} | Frame: {frame}")
 		self.event_overlay.setText(" · ".join(parts))
