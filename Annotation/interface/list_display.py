@@ -140,6 +140,15 @@ class ListDisplay(QWidget):
 		for idx, event in enumerate(self._visible_events):
 			self.list_widget.insertItem(idx, event.to_text())
 
+		self.main_window.media_player.refresh_event_pause_queue()
+
+	def highlight_event_by_frame(self, frame):
+		for idx, event in enumerate(self._visible_events):
+			if getattr(event, "frame", None) == frame:
+				self.list_widget.setCurrentRow(idx)
+				return True
+		return False
+
 	def _available_action_list(self):
 		actions = set(self.main_window.QUICK_LABEL_NAMES)
 		if getattr(self.main_window, "list_manager", None):
