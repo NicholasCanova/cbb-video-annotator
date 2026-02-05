@@ -48,6 +48,8 @@ class MediaPlayer(QWidget):
 		self.overlay_label.raise_()  # Raise above video widget
 		self.overlay_label.hide()  # Hide until video is loaded
 
+		self._pass_label_x = 150
+
 		# Label for showing current event info (top-right)
 		self.event_overlay = QLabel(self.video_container)
 		self.event_overlay.setStyleSheet("""
@@ -64,6 +66,21 @@ class MediaPlayer(QWidget):
 		self.event_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, True)
 		self.event_overlay.raise_()
 		self.event_overlay.hide()
+
+		self.pass_label = QLabel(self.video_container)
+		self.pass_label.setStyleSheet("""
+			QLabel {
+				background-color: rgba(0, 0, 0, 120);
+				color: white;
+				padding: 6px 10px;
+				font-size: 14px;
+				border-radius: 4px;
+			}
+		""")
+		self.pass_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+		self.pass_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+		self.pass_label.raise_()
+		self.pass_label.hide()
 
 		self.video_container.installEventFilter(self)
 
@@ -197,6 +214,8 @@ class MediaPlayer(QWidget):
 		# Resize and position overlay label
 		self.overlay_label.adjustSize()
 		self.overlay_label.raise_()  # Ensure it's on top
+		self._update_passing_events(frame_number)
+		self._position_pass_label()
 
 	def display_event_info(self, event):
 		if not event:
@@ -221,6 +240,47 @@ class MediaPlayer(QWidget):
 		self.event_overlay.show()
 		self._position_event_overlay()
 
+	def _update_passing_events(self, current_frame):
+		if self.main_window.editing_event or (
+			getattr(self.main_window, "list_display", None)
+			and getattr(self.main_window.list_display, "_playing_clips", False)
+		):
+			self.pass_label.hide()
+			return
+
+		if not getattr(self.main_window, "list_manager", None):
+			self.pass_label.hide()
+			return
+
+		frame_duration = self.main_window.frame_duration_ms if self.main_window.frame_duration_ms else 40.0
+		frames_visible = max(1, int(round(2000.0 / frame_duration)))
+
+		events = []
+		for event in sorted(self.main_window.list_manager.event_list, key=lambda e: getattr(e, "frame", float("inf"))):
+			event_frame = getattr(event, "frame", None)
+			if event_frame is None:
+				continue
+
+			if current_frame >= event_frame and current_frame < event_frame + frames_visible:
+				events.append(f"{event.label or 'Event'} ({event_frame})")
+
+		if not events:
+			self.pass_label.hide()
+			return
+
+		self.pass_label.setText(" | ".join(events))
+		self.pass_label.adjustSize()
+		self.pass_label.show()
+		self._position_pass_label()
+
+	def _position_pass_label(self):
+		if not self.pass_label.isVisible():
+			return
+
+		x = self.overlay_label.x() + self._pass_label_x
+		y = self.overlay_label.y()
+		self.pass_label.move(x, y)
+
 	def _position_event_overlay(self):
 		if not self.event_overlay.isVisible():
 			return
@@ -232,6 +292,7 @@ class MediaPlayer(QWidget):
 	def eventFilter(self, obj, event):
 		if obj is self.video_container and event.type() == QEvent.Resize:
 			self._position_event_overlay()
+			self._position_pass_label()
 		return super().eventFilter(obj, event)
 
 	def handle_errors(self):
