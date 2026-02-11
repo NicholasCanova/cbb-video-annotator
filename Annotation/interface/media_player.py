@@ -2,6 +2,8 @@
 import os
 from bisect import bisect_left
 
+import cv2
+
 from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaMetaData
 from PyQt5.QtMultimediaWidgets import QVideoWidget
@@ -142,6 +144,9 @@ class MediaPlayer(QWidget):
 		if filename != '':
 			self.media_player.setMedia(QMediaContent(QUrl.fromLocalFile(filename)))
 			self.play_button.setEnabled(True)
+			fps = self._read_video_frame_rate(filename)
+			if fps:
+				self.main_window.set_frame_rate(fps)
 			self.overlay_label.show() 
 			self.update_overlay()
 			filpath = os.path.basename(filename)
@@ -390,4 +395,14 @@ class MediaPlayer(QWidget):
 		frame_rate = self.media_player.metaData(QMediaMetaData.VideoFrameRate)
 		self.main_window.set_frame_rate(frame_rate)
 		self.update_overlay()
+
+	def _read_video_frame_rate(self, filename):
+		cap = cv2.VideoCapture(filename)
+		if not cap.isOpened():
+			return None
+		fps = cap.get(cv2.CAP_PROP_FPS)
+		cap.release()
+		if fps and fps > 0:
+			return fps
+		return None
 

@@ -395,7 +395,8 @@ class MainWindow(QMainWindow):
 			multiplier *= 5
 		if event.modifiers() & Qt.ControlModifier:
 			multiplier *= 10
-		return max(1, int(round(self.frame_duration_ms * multiplier)))
+		frame_duration_ms = self.frame_duration_ms or self.default_frame_duration_ms
+		return max(1, int(round(frame_duration_ms * multiplier)))
 
 	def position_to_frame(self, position_ms):
 		frame_duration_ms = self.frame_duration_ms if self.frame_duration_ms else self.default_frame_duration_ms
