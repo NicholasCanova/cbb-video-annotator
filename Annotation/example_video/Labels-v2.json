@@ -3,91 +3,35 @@
     "UrlYoutube": "",
     "annotations": [
         {
-            "frame": "13",
-            "gameTime": "1 - 00:00",
-            "label": "Drive",
-            "position": "527",
-            "team": "Left",
-            "visibility": "visible"
-        },
-        {
-            "frame": "14",
-            "gameTime": "1 - 00:00",
-            "label": "Drive",
-            "position": "543",
-            "team": "Left",
-            "visibility": "visible"
-        },
-        {
-            "frame": "16",
-            "gameTime": "1 - 00:00",
-            "label": "Dribble Handoff",
-            "position": "648",
-            "team": "None",
-            "visibility": "visible"
-        },
-        {
-            "frame": "17",
-            "gameTime": "1 - 00:00",
-            "label": "Dribble Handoff",
-            "position": "678",
-            "team": "None",
-            "visibility": "visible"
-        },
-        {
-            "frame": "19",
-            "gameTime": "1 - 00:00",
-            "label": "On Ball Screen",
-            "position": "756",
-            "team": "None",
-            "visibility": "visible"
-        },
-        {
-            "frame": "21",
-            "gameTime": "1 - 00:00",
-            "label": "On Ball Screen",
-            "position": "823",
-            "team": "None",
-            "visibility": "visible"
-        },
-        {
-            "frame": "27",
-            "gameTime": "1 - 00:01",
-            "label": "Fake Handoff",
-            "position": "1069",
-            "team": "None",
-            "visibility": "visible"
-        },
-        {
-            "frame": "29",
+            "frame": "33",
             "gameTime": "1 - 00:01",
             "label": "Drive",
-            "position": "1150",
-            "team": "Left",
+            "position": "1096",
+            "subType": "Left",
             "visibility": "visible"
         },
         {
-            "frame": "63",
-            "gameTime": "1 - 00:02",
-            "label": "Dribble Handoff",
-            "position": "2511",
-            "team": "None",
+            "frame": "101",
+            "gameTime": "1 - 00:04",
+            "label": "Off Ball Screen",
+            "position": "4044",
+            "subType": "None",
             "visibility": "visible"
         },
         {
-            "frame": "75",
-            "gameTime": "1 - 00:03",
-            "label": "Dribble Handoff",
-            "position": "3001",
-            "team": "None",
+            "frame": "111",
+            "gameTime": "1 - 00:04",
+            "label": "Pass",
+            "position": "4448",
+            "subType": "None",
             "visibility": "visible"
         },
         {
-            "frame": "78",
-            "gameTime": "1 - 00:03",
-            "label": "Fake Handoff",
-            "position": "3126",
-            "team": "None",
+            "frame": "141",
+            "gameTime": "1 - 00:05",
+            "label": "2P Shot",
+            "position": "5630",
+            "subType": "Other",
             "visibility": "visible"
         }
     ],

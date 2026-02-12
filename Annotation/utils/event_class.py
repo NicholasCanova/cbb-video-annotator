@@ -2,19 +2,19 @@
 
 class Event:
 
-	def __init__(self, label=None, half=None, time=None, team=None, position=None, visibility=None, frame=None):
+	def __init__(self, label=None, half=None, time=None, subType=None, position=None, visibility=None, frame=None):
 
 		self.label = label
 		self.half = half
 		self.time = time
-		self.team = team
+		self.subType = subType
 		self.position = position
 		self.visibility = visibility
 		self.frame = frame # if frame is not None else 0
 
 	def to_text(self):
-		if self.team and self.team != "None":
-			label = self.label + " (" + self.team + ")"
+		if self.subType and self.subType != "None":
+			label = self.label + " (" + self.subType + ")"
 		else:
 			label = self.label
 

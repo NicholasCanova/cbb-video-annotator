@@ -287,7 +287,7 @@ class EventSelectionWindow(QMainWindow):
 		if not self.preselect_first_label(event.label):
 			return False
 
-		second_match = self._match_and_select(self.list_widget_second, event.team)
+		second_match = self._match_and_select(self.list_widget_second, event.subType)
 		if second_match:
 			self.second_label = second_match
 			self.step = Step.THIRD
