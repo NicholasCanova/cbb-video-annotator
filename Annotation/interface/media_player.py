@@ -257,8 +257,8 @@ class MediaPlayer(QWidget):
 			time_str = ms_to_time(position)
 
 		parts = [label]
-		if event.team and not event.team == "None":
-			parts.append(event.team)
+		if event.subType and not event.subType == "None":
+			parts.append(event.subType)
 		parts.append(f"{time_str} | Frame: {frame}")
 		self.event_overlay.setText(" · ".join(parts))
 		self.event_overlay.adjustSize()

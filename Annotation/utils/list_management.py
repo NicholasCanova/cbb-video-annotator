@@ -121,7 +121,7 @@ class ListManager:
 						tmp_label = self.soccerNetToV2(event["label"])
 					else:
 						tmp_label = event["label"]
-					tmp_team = event["team"]
+					tmp_subType = event["subType"]
 					tmp_visibility = "default"
 					if "visibility" in event:
 						tmp_visibility = event["visibility"]
@@ -133,7 +133,7 @@ class ListManager:
 							tmp_frame = None
 					if tmp_frame is None:
 						tmp_frame = int(tmp_position // 40) if tmp_position >= 0 else 0
-					event_list.append(Event(tmp_label, tmp_half, tmp_time, tmp_team, tmp_position, tmp_visibility, tmp_frame))
+					event_list.append(Event(tmp_label, tmp_half, tmp_time, tmp_subType, tmp_position, tmp_visibility, tmp_frame))
 		return event_list
 
 	def save_file(self, path, half):
@@ -153,7 +153,7 @@ class ListManager:
 			tmp_dict = dict()
 			tmp_dict["gameTime"] = str(event.half) + " - " + str(event.time)
 			tmp_dict["label"] = str(event.label)
-			tmp_dict["team"] = str(event.team)
+			tmp_dict["subType"] = str(event.subType)
 			tmp_dict["visibility"] = str(event.visibility)
 			tmp_dict["position"] = str(event.position)
 			tmp_dict["frame"] = str(event.frame)
