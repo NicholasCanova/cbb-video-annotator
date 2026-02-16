@@ -4,6 +4,7 @@ Dribble Handoff
 Fake Handoff
 Off Ball Screen
 Post Up
+Inbound Pass
 Spot Up
 Isolation
 Cut
@@ -24,9 +25,13 @@ Free Throw
 Made Shot
 Missed Shot
 Blocked Shot
-Rebound
-Turnover with Steal
-Turnover without Steal
-Foul Committed
+Defensive Rebound
+Offensive Rebound
+Shooting Foul
+Common Foul
 Pass
+Pass Received
 Deflection
+Steal
+Out of Bounds
+Dead Ball Turnover

@@ -193,7 +193,7 @@ class MediaPlayer(QWidget):
 		frame_number = self.update_overlay()
 		if self.pause_at_events:
 			if frame_number < self._last_position_frame:
-				self._refresh_pause_queue(frame_number)
+				self._refresh_pause_queue(current_frame=frame_number)
 			self._maybe_pause_for_event(frame_number)
 		self._last_position_frame = frame_number
 
@@ -329,14 +329,19 @@ class MediaPlayer(QWidget):
 				self.main_window.list_display.highlight_event_by_frame(next_frame)
 			self._next_pause_index += 1
 
-	def _refresh_pause_queue(self, current_frame=None):
-		manager = getattr(self.main_window, "list_manager", None)
-		if manager:
-			self.pause_at_event_frames = sorted(
-				{getattr(event, "frame", None) for event in manager.event_list if getattr(event, "frame", None) is not None}
-			)
-		else:
-			self.pause_at_event_frames = []
+	def _refresh_pause_queue(self, current_frame=None, events=None):
+		event_source = events
+		if event_source is None:
+			manager = getattr(self.main_window, "list_manager", None)
+			event_source = manager.event_list if manager else []
+
+		self.pause_at_event_frames = sorted(
+			{
+				getattr(event, "frame", None)
+				for event in (event_source or [])
+				if getattr(event, "frame", None) is not None
+			}
+		)
 
 		if current_frame is None:
 			current_frame = self.main_window.position_to_frame(self.media_player.position())
@@ -354,14 +359,16 @@ class MediaPlayer(QWidget):
 		else:
 			self._next_pause_index = max(self._next_pause_index, target)
 
-	def refresh_event_pause_queue(self):
-		self._refresh_pause_queue()
+	def refresh_event_pause_queue(self, events=None):
+		self._refresh_pause_queue(events=events)
 
 	def _set_pause_at_events(self, enable):
 		self.pause_at_events = enable
 		if enable:
 			current_frame = self.main_window.position_to_frame(self.media_player.position())
-			self._refresh_pause_queue(current_frame)
+			list_display = getattr(self.main_window, "list_display", None)
+			filtered_events = getattr(list_display, "_visible_events", None)
+			self._refresh_pause_queue(current_frame=current_frame, events=filtered_events)
 		else:
 			self._next_pause_index = 0
 

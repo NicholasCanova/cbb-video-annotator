@@ -140,7 +140,7 @@ class ListDisplay(QWidget):
 		for idx, event in enumerate(self._visible_events):
 			self.list_widget.insertItem(idx, event.to_text())
 
-		self.main_window.media_player.refresh_event_pause_queue()
+		self.main_window.media_player.refresh_event_pause_queue(events=list(self._visible_events))
 
 	def highlight_event_by_frame(self, frame):
 		for idx, event in enumerate(self._visible_events):

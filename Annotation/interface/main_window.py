@@ -12,28 +12,30 @@ from utils.event_class import Event, ms_to_time
 class MainWindow(QMainWindow):
 	QUICK_LABEL_COMBOS = {
 		Qt.Key_D: {
-			Qt.Key_R: "Drive",
+			Qt.Key_D: "Drive",
 			Qt.Key_H: "Dribble Handoff",
 			Qt.Key_T: "Defenders Double Team",
 			Qt.Key_S: "Defenders Switch",
 			Qt.Key_F: "Deflection",
+			Qt.Key_U: "Ballhandler Defender Under Screen",
+			Qt.Key_O: "Ballhandler Defender Over Screen",
+			Qt.Key_B: "Dead Ball Turnover",
+			Qt.Key_R: "Defensive Rebound",
 		},
 		Qt.Key_O: {
 			Qt.Key_B: "On Ball Screen",
 			Qt.Key_F: "Off Ball Screen",
-			Qt.Key_S: "Ballhandler Defender Over Screen",
-		},
-		Qt.Key_U: {
-			Qt.Key_S: "Ballhandler Defender Under Screen",
+			Qt.Key_O: "Out of Bounds",
+			Qt.Key_R: "Offensive Rebound",
 		},
 		Qt.Key_F: {
 			Qt.Key_H: "Fake Handoff",
 			Qt.Key_T: "Free Throw",
-			Qt.Key_C: "Foul Committed",
 		},
 		Qt.Key_P: {
 			Qt.Key_U: "Post Up",
 			Qt.Key_S: "Pass",
+			Qt.Key_R: "Pass Received",
 		},
 		Qt.Key_S: {
 			Qt.Key_U: "Spot Up",
@@ -41,12 +43,16 @@ class MainWindow(QMainWindow):
 			Qt.Key_P: "Screener Popping to 3P Line",
 			Qt.Key_G: "Screener Ghosts to 3P Line",
 			Qt.Key_S: "Screener Slipping the Screen",
+			Qt.Key_T: "Steal",
+			Qt.Key_F: "Shooting Foul",
 		},
 		Qt.Key_I: {
 			Qt.Key_S: "Isolation",
+			Qt.Key_P: "Inbound Pass",
 		},
 		Qt.Key_C: {
 			Qt.Key_T: "Cut",
+			Qt.Key_F: "Common Foul",
 		},
 		Qt.Key_B: {
 			Qt.Key_S: "Blocked Shot",
@@ -55,7 +61,6 @@ class MainWindow(QMainWindow):
 			Qt.Key_U: "Roller Defender Up on Screen",
 			Qt.Key_D: "Roller Defender Dropping",
 			Qt.Key_H: "Roller Defender Hedging",
-			Qt.Key_B: "Rebound",
 		},
 		Qt.Key_At: { # Shift + 2
 			Qt.Key_P: "2P Shot",
@@ -69,10 +74,6 @@ class MainWindow(QMainWindow):
 		Qt.Key_X: {
 			Qt.Key_S: "Missed Shot",
 		},
-		Qt.Key_T: {
-			Qt.Key_S: "Turnover with Steal",
-			Qt.Key_W: "Turnover without Steal",
-		},
 	}
 	QUICK_LABEL_NAMES = [
 		"Drive",
@@ -81,6 +82,7 @@ class MainWindow(QMainWindow):
 		"Fake Handoff",
 		"Off Ball Screen",
 		"Post Up",
+		"Inbound Pass",
 		"Spot Up",
 		"Isolation",
 		"Cut",
@@ -101,12 +103,16 @@ class MainWindow(QMainWindow):
 		"Made Shot",
 		"Missed Shot",
 		"Blocked Shot",
-		"Rebound",
-		"Turnover with Steal",
-		"Turnover without Steal",
-		"Foul Committed",
+		"Defensive Rebound",
+		"Offensive Rebound",
+		"Shooting Foul",
+		"Common Foul",
 		"Pass",
+		"Pass Received",
 		"Deflection",
+		"Steal",
+		"Out of Bounds",
+		"Dead Ball Turnover",
 	]
 	def __init__(self):
 		super().__init__()
