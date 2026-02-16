@@ -90,6 +90,7 @@ class MediaPlayer(QWidget):
 		self.pause_at_event_frames = []
 		self._next_pause_index = 0
 		self._last_position_frame = 0
+		self._pause_event_source = None
 
 		self.video_container.installEventFilter(self)
 
@@ -330,7 +331,10 @@ class MediaPlayer(QWidget):
 			self._next_pause_index += 1
 
 	def _refresh_pause_queue(self, current_frame=None, events=None):
-		event_source = events
+		if events is not None:
+			self._pause_event_source = list(events)
+		event_source = self._pause_event_source
+
 		if event_source is None:
 			manager = getattr(self.main_window, "list_manager", None)
 			event_source = manager.event_list if manager else []
@@ -412,4 +416,3 @@ class MediaPlayer(QWidget):
 		if fps and fps > 0:
 			return fps
 		return None
-
