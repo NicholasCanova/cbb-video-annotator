@@ -3,35 +3,43 @@
     "UrlYoutube": "",
     "annotations": [
         {
-            "frame": "33",
+            "frame": "50",
             "gameTime": "1 - 00:01",
-            "label": "Drive",
-            "position": "1096",
+            "label": "Off Ball Screen",
+            "position": "1669",
             "subType": "Left",
             "visibility": "visible"
         },
         {
-            "frame": "101",
+            "frame": "121",
             "gameTime": "1 - 00:04",
             "label": "Off Ball Screen",
             "position": "4044",
-            "subType": "None",
+            "subType": "Right",
             "visibility": "visible"
         },
         {
-            "frame": "111",
+            "frame": "133",
             "gameTime": "1 - 00:04",
             "label": "Pass",
-            "position": "4448",
+            "position": "4445",
             "subType": "None",
             "visibility": "visible"
         },
         {
-            "frame": "141",
+            "frame": "167",
             "gameTime": "1 - 00:05",
             "label": "2P Shot",
-            "position": "5630",
+            "position": "5608",
             "subType": "Other",
+            "visibility": "visible"
+        },
+        {
+            "frame": "202",
+            "gameTime": "1 - 00:06",
+            "label": "Made Shot",
+            "position": "6761",
+            "subType": "None",
             "visibility": "visible"
         }
     ],
