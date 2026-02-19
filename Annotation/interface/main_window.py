@@ -1,3 +1,4 @@
+from re import M
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QMessageBox
 from PyQt5.QtGui import QPalette
 from PyQt5.QtCore import Qt, QTimer
@@ -13,7 +14,7 @@ class MainWindow(QMainWindow):
 	QUICK_LABEL_COMBOS = {
 		Qt.Key_D: {
 			Qt.Key_D: "Drive",
-			Qt.Key_H: "Dribble Handoff",
+			Qt.Key_H: "Handoff",
 			Qt.Key_T: "Defenders Double Team",
 			Qt.Key_S: "Defenders Switch",
 			Qt.Key_F: "Deflection",
@@ -24,7 +25,8 @@ class MainWindow(QMainWindow):
 		},
 		Qt.Key_O: {
 			Qt.Key_B: "On Ball Screen",
-			Qt.Key_F: "Off Ball Screen",
+			Qt.Key_S: "Off Ball Screen",
+			Qt.Key_F: "Offensive Foul",
 			Qt.Key_O: "Out of Bounds",
 			Qt.Key_R: "Offensive Rebound",
 		},
@@ -46,6 +48,9 @@ class MainWindow(QMainWindow):
 			Qt.Key_T: "Steal",
 			Qt.Key_F: "Shooting Foul",
 		},
+		Qt.Key_T: {
+			Qt.Key_S: "Transition",
+		},
 		Qt.Key_I: {
 			Qt.Key_S: "Isolation",
 			Qt.Key_P: "Inbound Pass",
@@ -58,6 +63,7 @@ class MainWindow(QMainWindow):
 			Qt.Key_S: "Blocked Shot",
 		},
 		Qt.Key_R: {
+			Qt.Key_S: "Ballhandler Rejects Screen",
 			Qt.Key_U: "Roller Defender Up on Screen",
 			Qt.Key_D: "Roller Defender Dropping",
 			Qt.Key_H: "Roller Defender Hedging",
@@ -74,45 +80,63 @@ class MainWindow(QMainWindow):
 		Qt.Key_X: {
 			Qt.Key_S: "Missed Shot",
 		},
+		Qt.Key_V: {
+			Qt.Key_NumberSign: "3 Second Violation", # Shift + V + 3
+			Qt.Key_Percent: "5 Second Violation", # Shift + V + 5
+			Qt.Key_ParenRight: "10 Second Violation", # Shift + V + 10
+			Qt.Key_S: "Shot Clock Violation", 
+			Qt.Key_T: "Travel Violation",
+			Qt.Key_O: "Offensive Goaltending Violation", 
+			Qt.Key_L: "Free Throw Lane Violation",
+		}
 	}
 	QUICK_LABEL_NAMES = [
-		"Drive",
+		"Common Foul",
+		"Drive"
+		"Handoff",
+		"Defenders Double Team",
+		"Defenders Switch",
+		"Deflection",
 		"On Ball Screen",
-		"Dribble Handoff",
-		"Fake Handoff",
 		"Off Ball Screen",
+		"Offensive Foul",
+		"Ballhandler Rejects Screen",
+		"Ballhandler Defender Over Screen",
+		"Ballhandler Defender Under Screen",
+		"Fake Handoff",
+		"Free Throw",
 		"Post Up",
-		"Inbound Pass",
+		"Pass",
 		"Spot Up",
-		"Isolation",
-		"Cut",
 		"Screener Rolling to Rim",
 		"Screener Popping to 3P Line",
 		"Screener Ghosts to 3P Line",
 		"Screener Slipping the Screen",
-		"Defenders Double Team",
-		"Defenders Switch",
-		"Ballhandler Defender Over Screen",
-		"Ballhandler Defender Under Screen",
+		"Isolation",
+		"Cut",
+		"Blocked Shot",
 		"Roller Defender Up on Screen",
 		"Roller Defender Dropping",
 		"Roller Defender Hedging",
-		"2P Shot",
-		"3P Shot",
-		"Free Throw",
-		"Made Shot",
-		"Missed Shot",
-		"Blocked Shot",
 		"Defensive Rebound",
 		"Offensive Rebound",
+		"2P Shot",
+		"3P Shot",
+		"Made Shot",
+		"Missed Shot",
+		"Transition",
+		"Inbound Pass",
 		"Shooting Foul",
-		"Common Foul",
-		"Pass",
-		"Pass Received",
-		"Deflection",
 		"Steal",
+		"Pass Received",
 		"Out of Bounds",
-		"Dead Ball Turnover",
+		"3 Second Violation",
+		"5 Second Violation",
+		"10 Second Violation",
+		"Shot Clock Violation",
+		"Travel Violation",
+		"Offensive Goaltending Violation",
+		"Free Throw Lane Violation",
 	]
 	def __init__(self):
 		super().__init__()
@@ -258,11 +282,17 @@ class MainWindow(QMainWindow):
 		if event.key() == Qt.Key_Delete or event.key() == Qt.Key_Backspace:
 			index = self.list_display.list_widget.currentRow()
 			if index >= 0:
-				self.list_manager.delete_event(index)
-				self.list_display.display_list()
-				path_label = self.media_player.get_last_label_file()
-				self.list_manager.save_file(path_label, self.half)
-				self._end_edit_event()
+				visible_events = getattr(self.list_display, "_visible_events", [])
+				if 0 <= index < len(visible_events):
+					target_event = visible_events[index]
+				else:
+					target_event = self.list_manager.get_event(index)
+				if target_event:
+					self.list_manager.delete_event(target_event)
+					self.list_display.display_list()
+					path_label = self.media_player.get_last_label_file()
+					self.list_manager.save_file(path_label, self.half)
+					self._end_edit_event()
 			self.setFocus()
 
 		# Play or pause the video with the space key
