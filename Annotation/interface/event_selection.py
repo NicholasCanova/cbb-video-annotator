@@ -13,6 +13,7 @@ class Step(IntEnum):
 	FIRST = 1
 	SECOND = 2
 	THIRD = 3
+	FOURTH = 4
 
 
 class EventSelectionWindow(QMainWindow):
@@ -39,18 +40,23 @@ class EventSelectionWindow(QMainWindow):
 		base = Path(__file__).resolve().parent
 
 		self.labels = self._read_labels(base / "../config/classes.txt")
-		self.second_label_map = self._read_second_label_map(base / "../config/second_classes.json")
-		self.third_labels = self._read_labels(base / "../config/third_classes.txt")
+		self.label_map = self._read_label_map(base / "../config/second_classes.json")
+		self.third_label_map = self._read_label_map(base / "../config/third_classes.json")
+		self.fourth_labels = self._read_labels(base / "../config/fourth_classes.txt")
+
 
 		self.list_widget = QListWidget()
 		self.list_widget_second = QListWidget()
 		self.list_widget_third = QListWidget()
+		self.list_widget_fourth = QListWidget()
 
 		for item_nbr, element in enumerate(self.labels):
 			self.list_widget.insertItem(item_nbr, element)
+			
 		self._populate_second_list(None)
-		for item_nbr, element in enumerate(self.third_labels):
-			self.list_widget_third.insertItem(item_nbr, element)
+		self._populate_third_list(None)
+		for item_nbr, element in enumerate(self.fourth_labels):
+			self.list_widget_fourth.insertItem(item_nbr, element)
 
 		# Layout the different widgets
 		central_display = QWidget(self)
@@ -60,22 +66,26 @@ class EventSelectionWindow(QMainWindow):
 		final_layout.addWidget(self.list_widget)
 		final_layout.addWidget(self.list_widget_second)
 		final_layout.addWidget(self.list_widget_third)
-
+		final_layout.addWidget(self.list_widget_fourth)
 		central_display.setLayout(final_layout)
 
 		self.step = Step.FIRST
 		self.first_label = None
 		self.second_label = None
+		self.third_label = None
 
 		self._ensure_selected(self.list_widget)
 		self.list_widget.setFocus()
+
+		self._set_column_visibility(show_second=True, show_third=False, show_fourth=True)
+
 
 	def _read_labels(self, path: Path):
 		if not path.exists():
 			return []
 		return [l.strip() for l in path.read_text().splitlines() if l.strip()]
 
-	def _read_second_label_map(self, path: Path):
+	def _read_label_map(self, path: Path):
 		if not path.exists():
 			return {}
 		try:
@@ -94,20 +104,51 @@ class EventSelectionWindow(QMainWindow):
 
 		return mapping
 
-	def _second_labels_for(self, first_label: str):
+	def _labels_for(self, first_label: str):
 		if first_label:
-			options = self.second_label_map.get(first_label)
+			options = self.label_map.get(first_label)
 			if options:
 				return options
 
-		return self.second_label_map.get("default", [])
+		return self.label_map.get("default", [])
 
 	def _populate_second_list(self, first_label):
 		self.list_widget_second.clear()
-		options = self._second_labels_for(first_label)
+		options = self._labels_for(first_label)
+
 		for item_nbr, element in enumerate(options):
 			self.list_widget_second.insertItem(item_nbr, element)
+
+		has_second = bool(options)
+
+		# If no second options -> show only FIRST + FOURTH (hide second + third)
+		self.list_widget_second.setVisible(has_second)
+		self.list_widget_third.setVisible(False)  # third stays hidden until after second is chosen
+
+		# Also clear third when second changes / disappears
+		self.list_widget_third.clear()
+		self.third_label = None
+
+		return has_second
+
+	def _third_labels_for(self, first_label: str):
+		if first_label:
+			options = self.third_label_map.get(first_label)
+			if options:
+				return options
+		return self.third_label_map.get("default", [])
+
+	def _populate_third_list(self, first_label):
+		self.list_widget_third.clear()
+		options = self._third_labels_for(first_label)
+		for item_nbr, element in enumerate(options):
+			self.list_widget_third.insertItem(item_nbr, element)
 		return bool(options)
+
+	def _set_column_visibility(self, show_second: bool, show_third: bool, show_fourth: bool):
+		self.list_widget_second.setVisible(bool(show_second))
+		self.list_widget_third.setVisible(bool(show_third))
+		self.list_widget_fourth.setVisible(bool(show_fourth))
 
 	def set_position(self):
 		x = self.main_window.pos().x() + self.main_window.frameGeometry().width() // 4
@@ -141,13 +182,20 @@ class EventSelectionWindow(QMainWindow):
 				return
 
 			self.first_label = item.text()
+			self.second_label = None
+			self.third_label = None
+
 			has_second = self._populate_second_list(self.first_label)
+
 			if not has_second:
-				self.second_label = None
-				self.step = Step.THIRD
-				self._enter_step(self.list_widget_third)
+				# 2-column mode: FIRST + FOURTH only
+				self._set_column_visibility(show_second=False, show_third=False, show_fourth=True)
+				self.step = Step.FOURTH
+				self._enter_step(self.list_widget_fourth)
 				return
 
+			# has second: show second; third still hidden until second picked
+			self._set_column_visibility(show_second=True, show_third=False, show_fourth=True)
 			self.step = Step.SECOND
 			self._enter_step(self.list_widget_second)
 
@@ -158,8 +206,20 @@ class EventSelectionWindow(QMainWindow):
 				return
 
 			self.second_label = item.text()
-			self.step = Step.THIRD
-			self._enter_step(self.list_widget_third)
+
+			# third exists only if second exists; populate third based on first label
+			has_third = self._populate_third_list(self.first_label)
+
+			if has_third:
+				self._set_column_visibility(show_second=True, show_third=True, show_fourth=True)
+				self.step = Step.THIRD
+				self._enter_step(self.list_widget_third)
+			else:
+				# no third options -> skip to fourth
+				self.third_label = None
+				self._set_column_visibility(show_second=True, show_third=False, show_fourth=True)
+				self.step = Step.FOURTH
+				self._enter_step(self.list_widget_fourth)
 
 		elif self.step == Step.THIRD:
 			item = self.list_widget_third.currentItem()
@@ -167,6 +227,17 @@ class EventSelectionWindow(QMainWindow):
 				self._ensure_selected(self.list_widget_third)
 				return
 
+			self.third_label = item.text()
+			self.step = Step.FOURTH
+			self._enter_step(self.list_widget_fourth)
+
+		elif self.step == Step.FOURTH:
+			item = self.list_widget_fourth.currentItem()
+			if not item:
+				self._ensure_selected(self.list_widget_fourth)
+				return
+
+			fourth_label = item.text()
 			position = self.main_window.media_player.media_player.position()
 
 			if self.main_window.editing_event and self.main_window.edit_event_obj:
@@ -178,8 +249,9 @@ class EventSelectionWindow(QMainWindow):
 				ms_to_time(position),
 				self.second_label,
 				position,
-				item.text(),
-				self.main_window.position_to_frame(position)
+				self.third_label,
+				self.main_window.position_to_frame(position),
+				fourth_label,
 			))
 
 			self.main_window.list_display.display_list()
@@ -238,22 +310,28 @@ class EventSelectionWindow(QMainWindow):
 		self.step = Step.FIRST
 		self.first_label = None
 		self.second_label = None
+		self.third_label = None
 
 		# Clear selections more forcefully
 		self.list_widget.clearSelection()
 		self.list_widget_second.clearSelection()
 		self.list_widget_third.clearSelection()
+		self.list_widget_fourth.clearSelection()
 
 		self.list_widget.setCurrentRow(-1)
 		self.list_widget_second.setCurrentRow(-1)
 		self.list_widget_third.setCurrentRow(-1)
+		self.list_widget_fourth.setCurrentRow(-1)
 
 		self._populate_second_list(None)
+		self._populate_third_list(None)
+		self._set_column_visibility(show_second=True, show_third=False, show_fourth=True)
 
 		# Drop focus off the lists
 		self.list_widget.clearFocus()
 		self.list_widget_second.clearFocus()
 		self.list_widget_third.clearFocus()
+		self.list_widget_fourth.clearFocus()
 
 		self.hide()
 		self.main_window.setFocus()
@@ -271,9 +349,11 @@ class EventSelectionWindow(QMainWindow):
 				has_second = self._populate_second_list(self.first_label)
 				self.second_label = None
 				if not has_second:
-					self.step = Step.THIRD
-					self._enter_step(self.list_widget_third)
+					self._set_column_visibility(show_second=False, show_third=False, show_fourth=True)
+					self.step = Step.FOURTH
+					self._enter_step(self.list_widget_fourth)
 				else:
+					self._set_column_visibility(show_second=True, show_third=False, show_fourth=True)
 					self.step = Step.SECOND
 					self._enter_step(self.list_widget_second)
 				return True

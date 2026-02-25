@@ -2,7 +2,7 @@
 
 class Event:
 
-	def __init__(self, label=None, half=None, time=None, subType=None, position=None, visibility=None, frame=None):
+	def __init__(self, label=None, half=None, time=None, subType=None, position=None, visibility=None, frame=None, fourthType=None):
 
 		self.label = label
 		self.half = half
@@ -11,6 +11,7 @@ class Event:
 		self.position = position
 		self.visibility = visibility
 		self.frame = frame # if frame is not None else 0
+		self.fourthType = fourthType
 
 	def to_text(self):
 		if self.subType and self.subType != "None":
@@ -18,7 +19,15 @@ class Event:
 		else:
 			label = self.label
 
-		return "Frame: " + str(self.frame) + " || " + label + " - " + str(self.half) + " - " + str(self.visibility)
+		parts = [f"Frame: {self.frame}", label, str(self.half)]
+
+		if self.visibility and self.visibility != "None":
+			parts.append(str(self.visibility))
+
+		if self.fourthType and self.fourthType != "None":
+			parts.append(str(self.fourthType))
+
+		return " || ".join([parts[0], " - ".join(parts[1:])])
 
 	def __lt__(self, other):
 		self.position < other.position
