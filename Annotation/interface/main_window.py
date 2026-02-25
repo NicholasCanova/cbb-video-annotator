@@ -211,7 +211,6 @@ class MainWindow(QMainWindow):
 		central_display.setLayout(final_layout)
 
 	def keyPressEvent(self, event):
-		print(event.key())
 		ctrl = False
 
 		if self._handle_multi_key_combo(event):
