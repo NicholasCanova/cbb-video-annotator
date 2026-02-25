@@ -83,7 +83,7 @@ class MainWindow(QMainWindow):
 		Qt.Key_V: {
 			Qt.Key_NumberSign: "3 Second Violation", # Shift + V + 3
 			Qt.Key_Percent: "5 Second Violation", # Shift + V + 5
-			Qt.Key_ParenRight: "10 Second Violation", # Shift + V + 10
+			Qt.Key_ParenRight: "10 Second Violation", # Shift + V + 0
 			Qt.Key_S: "Shot Clock Violation", 
 			Qt.Key_T: "Travel Violation",
 			Qt.Key_O: "Offensive Goaltending Violation", 
@@ -92,7 +92,7 @@ class MainWindow(QMainWindow):
 	}
 	QUICK_LABEL_NAMES = [
 		"Common Foul",
-		"Drive"
+		"Drive",
 		"Handoff",
 		"Defenders Double Team",
 		"Defenders Switch",
@@ -211,6 +211,7 @@ class MainWindow(QMainWindow):
 		central_display.setLayout(final_layout)
 
 	def keyPressEvent(self, event):
+		print(event.key())
 		ctrl = False
 
 		if self._handle_multi_key_combo(event):

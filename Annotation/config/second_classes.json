@@ -1,10 +1,13 @@
 {
 	"default": [],
-	"Drive": ["Left", "Right"],
+	"Drive": ["Left", "Right", "Straight"],
 	"Post Up": ["Left", "Right"],
 	"Isolation": ["Left", "Right", "Nothing"],
 	"2P Shot": ["Other", "Layup", "Dunk"],
 	"Off Ball Screen": ["Left", "Right"],
 	"Handoff": ["Left", "Right"],
-	"On Ball Screen": ["Left", "Right"]
+	"On Ball Screen": ["Left", "Right"],
+	"Offensive Rebound": ["Contested", "Uncontested"],
+	"Defensive Rebound": ["Contested", "Uncontested"],
+	"3P Shot": ["Contested", "Uncontested"]
 }
