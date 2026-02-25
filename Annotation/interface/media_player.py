@@ -103,6 +103,7 @@ class MediaPlayer(QWidget):
 		self.pause_at_events = False
 		self.pause_at_event_frames = []
 		self._pause_action_filter = None
+		self._pass_event_display_filter = None
 		self._next_pause_index = 0
 		self._last_position_frame = 0
 		self._pause_event_source = None
@@ -141,6 +142,11 @@ class MediaPlayer(QWidget):
 		self.pause_actions_button.setFocusPolicy(Qt.NoFocus)
 		self.pause_actions_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
+		self.filter_events_button = QPushButton("Filter Displayed Events")
+		self.filter_events_button.clicked.connect(self._open_event_display_filter)
+		self.filter_events_button.setFocusPolicy(Qt.NoFocus)
+		self.filter_events_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+
 		# create hbox layout for controls
 		control_row = QHBoxLayout()
 		control_row.setContentsMargins(0, 0, 0, 0)
@@ -149,6 +155,7 @@ class MediaPlayer(QWidget):
 		control_row.addWidget(self.play_button)
 		control_row.addWidget(self.pause_at_events_button)
 		control_row.addWidget(self.pause_actions_button)
+		control_row.addWidget(self.filter_events_button)
 		control_row.addStretch(1)
 
 		# create vbox layout
@@ -362,12 +369,13 @@ class MediaPlayer(QWidget):
 				continue
 
 			if current_frame >= event_frame and current_frame < event_frame + frames_visible:
-				label = event.label or "Event"
-				subtype = getattr(event, "subType", None)
-				if subtype and subtype != "None":
-					events.append(f"{label} ({subtype})")
-				else:
-					events.append(label)
+				if not self._pass_event_display_filter or self._passes_display_filter(event):
+					label = event.label or "Event"
+					subtype = getattr(event, "subType", None)
+					if subtype and subtype != "None":
+						events.append(f"{label} ({subtype})")
+					else:
+						events.append(label)
 
 		if not events:
 			self._clear_pass_badges()
@@ -406,7 +414,7 @@ class MediaPlayer(QWidget):
 			badge.setFixedSize(self._badge_width, self._badge_height)
 			badge.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
-			# With QGraphicsVideoItem transparency should now blend with the video
+			# With QGraphicsVideoItem transparency blended with the video
 			badge.setStyleSheet("""
 				QLabel {
 					background-color: rgba(255, 0, 0, 204);
@@ -485,22 +493,21 @@ class MediaPlayer(QWidget):
 			self._refresh_pause_queue(current_frame=current_frame, events=filtered_events)
 		else:
 			self._next_pause_index = 0
+	
+	def _open_multi_select_filter_dialog(self, *, title: str, empty_title: str, empty_message: str, choices, current_filter, on_apply):
+		# choices: list[str]
+		# current_filter: None or set[str] of normalized keys
+		# on_apply: callable(new_filter_or_none) -> None
 
-	def _open_pause_action_selector(self):
-		manager = getattr(self.main_window, "list_manager", None)
-		if not manager:
-			QMessageBox.information(self, "Pause Actions", "Load a video with annotations first.")
-			return
-
-		choices = self._pause_action_choices(manager.event_list)
 		if not choices:
-			QMessageBox.information(self, "Pause Actions", "No annotated events are available yet.")
+			QMessageBox.information(self, empty_title, empty_message)
 			return
 
 		dialog = QDialog(self)
-		dialog.setWindowTitle("Pause At Actions")
+		dialog.setWindowTitle(title)
 		layout = QVBoxLayout(dialog)
 
+		# Controls row
 		control_row = QHBoxLayout()
 		select_all = QPushButton("Select All", dialog)
 		deselect_all = QPushButton("Deselect All", dialog)
@@ -508,24 +515,23 @@ class MediaPlayer(QWidget):
 		control_row.addWidget(deselect_all)
 		layout.addLayout(control_row)
 
+		# List of checkboxes
 		list_widget = QListWidget(dialog)
-		active_filter = (
-			None
-			if self._pause_action_filter is None
-			else {self._normalize_pause_label(value) for value in self._pause_action_filter}
-		)
+
+		active_filter = None if current_filter is None else set(current_filter)
+
 		for action in choices:
 			action_key = self._normalize_pause_label(action)
 			item = QListWidgetItem(action)
 			item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
 			item.setCheckState(
-				Qt.Checked
-				if active_filter is None or action_key in active_filter
-				else Qt.Unchecked
+				Qt.Checked if active_filter is None or action_key in active_filter else Qt.Unchecked
 			)
 			list_widget.addItem(item)
+
 		layout.addWidget(list_widget)
 
+		# OK / Cancel
 		buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=dialog)
 		buttons.accepted.connect(dialog.accept)
 		buttons.rejected.connect(dialog.reject)
@@ -546,13 +552,56 @@ class MediaPlayer(QWidget):
 			for i in range(list_widget.count())
 			if list_widget.item(i).checkState() == Qt.Checked
 		}
-		normalized_choices = {self._normalize_pause_label(choice) for choice in choices}
-		if not selected or selected == normalized_choices:
-			self._pause_action_filter = None
-		else:
-			self._pause_action_filter = selected
 
-		self._refresh_pause_queue()
+		normalized_choices = {self._normalize_pause_label(choice) for choice in choices}
+
+		new_filter = None
+		if selected and selected != normalized_choices:
+			new_filter = selected
+
+		on_apply(new_filter)
+
+	def _open_pause_action_selector(self):
+		manager = getattr(self.main_window, "list_manager", None)
+		if not manager:
+			QMessageBox.information(self, "Pause Actions", "Load a video with annotations first.")
+			return
+
+		choices = self._pause_action_choices(manager.event_list)
+
+		def _apply(new_filter):
+			self._pause_action_filter = new_filter
+			self._refresh_pause_queue()
+
+		self._open_multi_select_filter_dialog(
+			title="Pause At Actions",
+			empty_title="Pause Actions",
+			empty_message="No annotated events are available yet.",
+			choices=choices,
+			current_filter=self._pause_action_filter,
+			on_apply=_apply,
+		)
+
+	def _open_event_display_filter(self):
+		manager = getattr(self.main_window, "list_manager", None)
+		if not manager:
+			QMessageBox.information(self, "Filter Displayed Events", "Load a video with annotations first.")
+			return
+
+		choices = self._pause_action_choices(manager.event_list)
+
+		def _apply(new_filter):
+			self._pass_event_display_filter = new_filter
+			self.update_overlay()
+
+		self._open_multi_select_filter_dialog(
+			title="Filter Displayed Events",
+			empty_title="Filter Displayed Events",
+			empty_message="No annotated events are available yet.",
+			choices=choices,
+			current_filter=self._pass_event_display_filter,
+			on_apply=_apply,
+		)
 
 	def _pause_action_choices(self, events):
 		seen = set()
@@ -579,6 +628,14 @@ class MediaPlayer(QWidget):
 		return (
 			self._normalize_pause_label(self._formatted_pause_label(event))
 			in self._pause_action_filter
+		)
+
+	def _passes_display_filter(self, event):
+		if self._pass_event_display_filter is None:
+			return True
+		return (
+			self._normalize_pause_label(self._formatted_pause_label(event))
+			in self._pass_event_display_filter
 		)
 
 	def _position_event_overlay(self):
