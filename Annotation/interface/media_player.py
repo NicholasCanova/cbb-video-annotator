@@ -36,6 +36,7 @@ class MediaPlayer(QWidget):
 		self.video_view.setStyleSheet("background: transparent;")
 		self.video_view.setAttribute(Qt.WA_TranslucentBackground, True)
 		self.video_view.viewport().setAttribute(Qt.WA_TranslucentBackground, True)
+		self.video_view.setFocusPolicy(Qt.NoFocus)
 
 		# Create container widget for video with overlay
 		self.video_container = QWidget()
@@ -111,22 +112,26 @@ class MediaPlayer(QWidget):
 		# Button to open a new file
 		self.open_file_button = QPushButton('Open video')
 		self.open_file_button.clicked.connect(self.open_file)
+		self.open_file_button.setFocusPolicy(Qt.NoFocus)
 
 		# Button for playing the video
 		self.play_button = QPushButton()
 		self.play_button.setEnabled(False)
 		self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
 		self.play_button.clicked.connect(self.play_video)
+		self.play_button.setFocusPolicy(Qt.NoFocus)
 
 		# Button for the slider
 		self.slider = QSlider(Qt.Horizontal)
 		self.slider.setRange(0, 0)
 		self.slider.sliderMoved.connect(self.set_position)
 		self.slider.sliderReleased.connect(self._slider_released)
+		self.slider.setFocusPolicy(Qt.NoFocus)
 
 		self.pause_at_events_button = QPushButton("Pause At Tags")
 		self.pause_at_events_button.setCheckable(True)
 		self.pause_at_events_button.toggled.connect(self._set_pause_at_events)
+		self.pause_at_events_button.setFocusPolicy(Qt.NoFocus)
 
 		# create hbox layout
 		hboxLayout = QHBoxLayout()
