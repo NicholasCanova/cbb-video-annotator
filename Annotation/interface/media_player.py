@@ -4,7 +4,7 @@ from bisect import bisect_left
 
 import cv2
 
-from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel, QGraphicsView, QGraphicsScene
+from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel, QGraphicsView, QGraphicsScene, QMessageBox
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaMetaData
 from PyQt5.QtMultimediaWidgets import QGraphicsVideoItem
 from PyQt5.QtCore import Qt, QUrl, QEvent, QSizeF
@@ -174,7 +174,17 @@ class MediaPlayer(QWidget):
 			self.update_overlay()
 
 			filpath = os.path.basename(filename)
-			self.main_window.half = int(filpath[0])
+			try:
+				self.main_window.half = int(filpath[0])
+			except (ValueError, IndexError):
+				QMessageBox.warning(
+					self,
+					"Unsupported filename",
+					"Please choose a video whose name begins with a number (e.g., \"1.mp4\").",
+				)
+				self.media_player.setMedia(QMediaContent())
+				self.play_button.setEnabled(False)
+				return
 
 			self.path_label = os.path.dirname(filename) + "/Labels.json"
 			self.path_label = self.get_last_label_file()
