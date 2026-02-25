@@ -3,8 +3,7 @@ import os
 from bisect import bisect_left
 
 import cv2
-
-from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel, QGraphicsView, QGraphicsScene, QMessageBox
+from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel, QGraphicsView, QGraphicsScene, QMessageBox, QDialog, QListWidget, QListWidgetItem, QDialogButtonBox, QSizePolicy
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaMetaData
 from PyQt5.QtMultimediaWidgets import QGraphicsVideoItem
 from PyQt5.QtCore import Qt, QUrl, QEvent, QSizeF
@@ -103,6 +102,7 @@ class MediaPlayer(QWidget):
 
 		self.pause_at_events = False
 		self.pause_at_event_frames = []
+		self._pause_action_filter = None
 		self._next_pause_index = 0
 		self._last_position_frame = 0
 		self._pause_event_source = None
@@ -113,6 +113,7 @@ class MediaPlayer(QWidget):
 		self.open_file_button = QPushButton('Open video')
 		self.open_file_button.clicked.connect(self.open_file)
 		self.open_file_button.setFocusPolicy(Qt.NoFocus)
+		self.open_file_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
 		# Button for playing the video
 		self.play_button = QPushButton()
@@ -120,6 +121,7 @@ class MediaPlayer(QWidget):
 		self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
 		self.play_button.clicked.connect(self.play_video)
 		self.play_button.setFocusPolicy(Qt.NoFocus)
+		self.play_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
 		# Button for the slider
 		self.slider = QSlider(Qt.Horizontal)
@@ -132,21 +134,28 @@ class MediaPlayer(QWidget):
 		self.pause_at_events_button.setCheckable(True)
 		self.pause_at_events_button.toggled.connect(self._set_pause_at_events)
 		self.pause_at_events_button.setFocusPolicy(Qt.NoFocus)
+		self.pause_at_events_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
-		# create hbox layout
-		hboxLayout = QHBoxLayout()
-		hboxLayout.setContentsMargins(0, 0, 0, 0)
+		self.pause_actions_button = QPushButton("Choose Pause Actions")
+		self.pause_actions_button.clicked.connect(self._open_pause_action_selector)
+		self.pause_actions_button.setFocusPolicy(Qt.NoFocus)
+		self.pause_actions_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
-		# set widgets to the hbox layout
-		hboxLayout.addWidget(self.open_file_button)
-		hboxLayout.addWidget(self.play_button)
-		hboxLayout.addWidget(self.pause_at_events_button)
-		hboxLayout.addWidget(self.slider)
+		# create hbox layout for controls
+		control_row = QHBoxLayout()
+		control_row.setContentsMargins(0, 0, 0, 0)
+		control_row.setSpacing(12)
+		control_row.addWidget(self.open_file_button)
+		control_row.addWidget(self.play_button)
+		control_row.addWidget(self.pause_at_events_button)
+		control_row.addWidget(self.pause_actions_button)
+		control_row.addStretch(1)
 
 		# create vbox layout
 		self.layout = QVBoxLayout()
 		self.layout.addWidget(self.video_container)
-		self.layout.addLayout(hboxLayout)
+		self.layout.addWidget(self.slider)
+		self.layout.addLayout(control_row)
 
 		# route video into QGraphicsVideoItem (not QVideoWidget)
 		self.media_player.setVideoOutput(self.video_item)
@@ -444,7 +453,7 @@ class MediaPlayer(QWidget):
 			{
 				getattr(event, "frame", None)
 				for event in (event_source or [])
-				if getattr(event, "frame", None) is not None
+				if getattr(event, "frame", None) is not None and self._event_allowed_for_pause(event)
 			}
 		)
 
@@ -476,6 +485,101 @@ class MediaPlayer(QWidget):
 			self._refresh_pause_queue(current_frame=current_frame, events=filtered_events)
 		else:
 			self._next_pause_index = 0
+
+	def _open_pause_action_selector(self):
+		manager = getattr(self.main_window, "list_manager", None)
+		if not manager:
+			QMessageBox.information(self, "Pause Actions", "Load a video with annotations first.")
+			return
+
+		choices = self._pause_action_choices(manager.event_list)
+		if not choices:
+			QMessageBox.information(self, "Pause Actions", "No annotated events are available yet.")
+			return
+
+		dialog = QDialog(self)
+		dialog.setWindowTitle("Pause At Actions")
+		layout = QVBoxLayout(dialog)
+
+		control_row = QHBoxLayout()
+		select_all = QPushButton("Select All", dialog)
+		deselect_all = QPushButton("Deselect All", dialog)
+		control_row.addWidget(select_all)
+		control_row.addWidget(deselect_all)
+		layout.addLayout(control_row)
+
+		list_widget = QListWidget(dialog)
+		active_filter = (
+			None
+			if self._pause_action_filter is None
+			else {self._normalize_pause_label(value) for value in self._pause_action_filter}
+		)
+		for action in choices:
+			action_key = self._normalize_pause_label(action)
+			item = QListWidgetItem(action)
+			item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+			item.setCheckState(
+				Qt.Checked
+				if active_filter is None or action_key in active_filter
+				else Qt.Unchecked
+			)
+			list_widget.addItem(item)
+		layout.addWidget(list_widget)
+
+		buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=dialog)
+		buttons.accepted.connect(dialog.accept)
+		buttons.rejected.connect(dialog.reject)
+		layout.addWidget(buttons)
+
+		def _set_all(state):
+			for i in range(list_widget.count()):
+				list_widget.item(i).setCheckState(state)
+
+		select_all.clicked.connect(lambda: _set_all(Qt.Checked))
+		deselect_all.clicked.connect(lambda: _set_all(Qt.Unchecked))
+
+		if dialog.exec() != QDialog.Accepted:
+			return
+
+		selected = {
+			self._normalize_pause_label(list_widget.item(i).text())
+			for i in range(list_widget.count())
+			if list_widget.item(i).checkState() == Qt.Checked
+		}
+		normalized_choices = {self._normalize_pause_label(choice) for choice in choices}
+		if not selected or selected == normalized_choices:
+			self._pause_action_filter = None
+		else:
+			self._pause_action_filter = selected
+
+		self._refresh_pause_queue()
+
+	def _pause_action_choices(self, events):
+		seen = set()
+		choices = []
+		for event in sorted(events, key=lambda e: self._formatted_pause_label(e)):
+			label = self._formatted_pause_label(event)
+			key = self._normalize_pause_label(label)
+			if label and key not in seen:
+				seen.add(key)
+				choices.append(label)
+		return choices
+
+	def _formatted_pause_label(self, event):
+		return getattr(event, "label", None) or "Event"
+
+	def _normalize_pause_label(self, label):
+		if label is None:
+			return ""
+		return str(label).strip().lower()
+
+	def _event_allowed_for_pause(self, event):
+		if self._pause_action_filter is None:
+			return True
+		return (
+			self._normalize_pause_label(self._formatted_pause_label(event))
+			in self._pause_action_filter
+		)
 
 	def _position_event_overlay(self):
 		if not self.event_overlay.isVisible():
