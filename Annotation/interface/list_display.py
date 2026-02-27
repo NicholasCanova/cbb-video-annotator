@@ -403,7 +403,7 @@ class ListDisplay(QWidget):
 			("Shift + F + T", "Free Throw"),
 			("Shift + P + U", "Post Up"),
 			("Shift + P + S", "Pass"),
-			("Shift + S + U", "Spot Up"),
+			# ("Shift + S + U", "Spot Up"),
 			("Shift + S + R", "Screener Rolling to Rim"),
 			("Shift + S + P", "Screener Popping to 3P Line"),
 			("Shift + S + G", "Screener Ghosts to 3P Line"),

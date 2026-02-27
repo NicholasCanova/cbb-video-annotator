@@ -7,7 +7,7 @@
 	"Off Ball Screen": ["Left", "Right"],
 	"Handoff": ["Left", "Right"],
 	"On Ball Screen": ["Left", "Right"],
-	"Offensive Rebound": ["Contested", "Uncontested"],
-	"Defensive Rebound": ["Contested", "Uncontested"],
-	"3P Shot": ["Contested", "Uncontested"]
+	"3P Shot": ["Contested", "Uncontested"],
+	"Cut": ["Cut", "Flash"],
+	"Pass Received": ["None", "Cutter Receives Pass"]
 }

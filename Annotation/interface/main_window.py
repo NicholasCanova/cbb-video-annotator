@@ -40,7 +40,7 @@ class MainWindow(QMainWindow):
 			Qt.Key_R: "Pass Received",
 		},
 		Qt.Key_S: {
-			Qt.Key_U: "Spot Up",
+			# Qt.Key_U: "Spot Up",
 			Qt.Key_R: "Screener Rolling to Rim",
 			Qt.Key_P: "Screener Popping to 3P Line",
 			Qt.Key_G: "Screener Ghosts to 3P Line",
@@ -107,7 +107,7 @@ class MainWindow(QMainWindow):
 		"Free Throw",
 		"Post Up",
 		"Pass",
-		"Spot Up",
+		# "Spot Up",
 		"Screener Rolling to Rim",
 		"Screener Popping to 3P Line",
 		"Screener Ghosts to 3P Line",
