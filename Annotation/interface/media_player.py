@@ -391,7 +391,7 @@ class MediaPlayer(QWidget):
 		frame_duration = self.main_window.frame_duration_ms if self.main_window.frame_duration_ms else 40.0
 		frames_visible = max(1, int(round(2000.0 / frame_duration)))
 
-		events = []
+		event_entries = []
 		for event in sorted(self.main_window.list_manager.event_list, key=lambda e: getattr(e, "frame", float("inf"))):
 			event_frame = getattr(event, "frame", None)
 			if event_frame is None:
@@ -402,18 +402,24 @@ class MediaPlayer(QWidget):
 					label = event.label or "Event"
 					subtype = getattr(event, "subType", None)
 					if subtype and subtype != "None":
-						events.append(f"{label} ({subtype})")
+						text = f"{label} ({subtype})"
 					else:
-						events.append(label)
+						text = label
+					event_entries.append((text, event_frame))
 
-		if not events:
+		if not event_entries:
 			self._clear_pass_badges()
 			self.pass_label_container.hide()
 			return
 
-		self._populate_pass_badges(events)
+		self._populate_pass_badges([text for text, _ in event_entries])
 		self.pass_label_container.show()
 		self._position_pass_label()
+
+		list_display = getattr(self.main_window, "list_display", None)
+		if list_display:
+			closest_event = min(event_entries, key=lambda entry: abs(entry[1] - current_frame))
+			list_display.highlight_event_by_frame(closest_event[1])
 
 	def _position_pass_label(self):
 		if not self.pass_label_container.isVisible():
