@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (
 	QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QListWidget, QLineEdit,
 	QCompleter, QApplication, QDialog, QLabel, QTextBrowser, QFrame,
-	QTableWidget, QTableWidgetItem, QHeaderView
+	QTableWidget, QTableWidgetItem, QHeaderView, QStyle, QSizePolicy
 )
 from PyQt5.QtCore import Qt, QStringListModel, QEvent, QTimer
 from PyQt5.QtMultimedia import QMediaPlayer
@@ -74,13 +74,46 @@ class ListDisplay(QWidget):
 		self.list_widget.clicked.connect(self._on_event_clicked)
 		self.layout.addWidget(self.list_widget)
 
+		nav_layout = QHBoxLayout()
+		nav_layout.setContentsMargins(0, 0, 0, 0)
+
+		self.prev_clip_button = QPushButton()
+		self.prev_clip_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekBackward))
+		self.prev_clip_button.setFlat(True)
+		self.prev_clip_button.clicked.connect(lambda: self._step_clip(-1))
+		self.prev_clip_button.setEnabled(False)
+		self.prev_clip_button.setFixedWidth(28)
+		self.prev_clip_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+		nav_layout.addWidget(self.prev_clip_button)
+
 		self.play_clips_button = QPushButton("View Event Clips")
 		self.play_clips_button.clicked.connect(self._toggle_play_clips)
-		self.layout.addWidget(self.play_clips_button)
+		self.play_clips_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
+		nav_layout.addWidget(self.play_clips_button)
 
-		self.help_button = QPushButton("Help")
-		self.help_button.clicked.connect(self._show_help)
-		self.layout.addWidget(self.help_button)
+		self.next_clip_button = QPushButton()
+		self.next_clip_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekForward))
+		self.next_clip_button.setFlat(True)
+		self.next_clip_button.clicked.connect(lambda: self._step_clip(1))
+		self.next_clip_button.setEnabled(False)
+		self.next_clip_button.setFixedWidth(28)
+		self.next_clip_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+		nav_layout.addWidget(self.next_clip_button)
+
+		self.loop_clip_button = QPushButton()
+		self.loop_clip_button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
+		self.loop_clip_button.setFlat(True)
+		self.loop_clip_button.setCheckable(True)
+		self.loop_clip_button.setEnabled(False)
+		self.loop_clip_button.clicked.connect(self._toggle_clip_loop)
+		self.loop_clip_button.setFixedWidth(28)
+		self.loop_clip_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+		nav_layout.addWidget(self.loop_clip_button)
+		self._clip_loop_enabled = False
+
+		nav_layout.addStretch(1)
+		self.layout.addLayout(nav_layout)
+
 
 		self._clip_sequence = []
 		self._current_clip_index = 0
@@ -224,6 +257,7 @@ class ListDisplay(QWidget):
 	def _toggle_play_clips(self):
 		if self._playing_clips:
 			self._stop_clip_sequence()
+			self._update_clip_nav_buttons()
 			return
 
 		if not self.main_window.media_player.play_button.isEnabled():
@@ -240,6 +274,7 @@ class ListDisplay(QWidget):
 		self._playing_clips = True
 		self._current_clip_index = 0
 		self.play_clips_button.setText("Stop Viewing Clips")
+		self._update_clip_nav_buttons()
 		self._play_next_clip()
 
 	def _build_clip_sequence(self, events):
@@ -264,6 +299,16 @@ class ListDisplay(QWidget):
 			sequence.append({"row": idx, "start": start, "end": end})
 		return sequence
 
+	def _step_clip(self, delta):
+		if not self._playing_clips or not self._clip_sequence:
+			return
+		target = self._current_clip_index + delta
+		target = max(0, min(len(self._clip_sequence) - 1, target))
+		if target == self._current_clip_index:
+			return
+		self._current_clip_index = target
+		self._play_next_clip()
+
 	def _play_next_clip(self):
 		self._clip_pause_timer.stop()
 		if not self._playing_clips or self._current_clip_index >= len(self._clip_sequence):
@@ -281,6 +326,7 @@ class ListDisplay(QWidget):
 		player = self.main_window.media_player.media_player
 		player.play()
 		self.main_window.setFocus()
+		self._update_clip_nav_buttons()
 
 	def _stop_clip_sequence(self):
 		self._clip_pause_timer.stop()
@@ -295,6 +341,18 @@ class ListDisplay(QWidget):
 		self.main_window.media_player.media_player.pause()
 		self.list_widget.setCurrentRow(-1)
 		self._update_event_info(None)
+		self._update_clip_nav_buttons()
+
+	def _update_clip_nav_buttons(self):
+		playing = self._playing_clips and bool(self._clip_sequence)
+		self.prev_clip_button.setEnabled(playing and self._current_clip_index > 0)
+		self.next_clip_button.setEnabled(
+			playing and self._current_clip_index < max(0, len(self._clip_sequence) - 1)
+		)
+		self.loop_clip_button.setEnabled(playing)
+
+	def _toggle_clip_loop(self, checked):
+		self._clip_loop_enabled = bool(checked)
 
 	def _update_event_info(self, event):
 		self.main_window.media_player.display_event_info(event)
@@ -309,7 +367,8 @@ class ListDisplay(QWidget):
 
 		if position >= self._current_clip_end:
 			player.pause()
-			self._current_clip_index += 1
+			if not self._clip_loop_enabled:
+				self._current_clip_index += 1
 			self._current_clip_end = None
 
 			if self._current_clip_index >= len(self._clip_sequence):
@@ -403,7 +462,7 @@ class ListDisplay(QWidget):
 			("Shift + F + T", "Free Throw"),
 			("Shift + P + U", "Post Up"),
 			("Shift + P + S", "Pass"),
-			("Shift + S + U", "Spot Up"),
+			# ("Shift + S + U", "Spot Up"),
 			("Shift + S + R", "Screener Rolling to Rim"),
 			("Shift + S + P", "Screener Popping to 3P Line"),
 			("Shift + S + G", "Screener Ghosts to 3P Line"),
@@ -513,7 +572,17 @@ class ListDisplay(QWidget):
 				<ul>
 					<li>Click <b>Open Video</b> to load <code>1.mov</code> with <code>Labels-v2.json</code> in the same folder.</li>
 					<li>Space toggles play/pause. Arrow keys step. Use modifiers for bigger jumps (Shift = 5 frames, Command = 10, Shift+Command = 50).</li>
-					<li>A = ×1 speed, Z = ×2, E = ×4.</li>
+					<li>Playback speed: A = 1x speed, Z = 2x, E = 4x, S = 1/2x.</li>
+				</ul>
+			</div>
+		</div>
+
+		<div class="card">
+			<div class="cardTitle">Creating New Events</div>
+			<div class="cardBody">
+				<ul>
+					<li>Navigate to the frame where the event occurs.</li>
+					<li>Press <b>ENTER</b> to create a generic event, or use a hotkey below to create a specific action.</li>
 				</ul>
 			</div>
 		</div>
@@ -529,11 +598,27 @@ class ListDisplay(QWidget):
 		</div>
 
 		<div class="card">
-			<div class="cardTitle">Creating New Events</div>
+			<div class="cardTitle">Bottom Bar Controls</div>
 			<div class="cardBody">
 				<ul>
-					<li>Navigate to the frame where the event occurs.</li>
-					<li>Press <b>ENTER</b> to create a generic event, or use a hotkey below to create a specific action.</li>
+					<li>The playback speed can be set to 1x, 2x, 4x, or 1/2x using the buttons.</li>
+					<li><b>Play/Pause</b> button toggles the video playback.</li>
+					<li><b>Pause at Tags</b> button pauses the video at the tags in the video.</li>
+					<li><b>Choose Pause Actions</b> button allows you to choose the actions to pause the video at when using the <b>Pause at Tags</b> button.</li>
+					<li><b>Filter Displayed Events</b> button allows you to filter the events displayed in red at the top of the video.</li>
+					<li>The volume can be adjusted using the volume slider.</li>
+				</ul>
+			</div>
+		</div>
+
+		<div class="card">
+			<div class="cardTitle">Right Sidebar</div>
+			<div class="cardBody">
+				<ul>
+					<li>The right sidebar displays the events in the video. You can click on an event to edit it or delete it.</li>
+					<li>The search bar at the top of the right sidebar allows you to search for events by label.</li>
+					<li><b>View Event Clips</b> button allows you to view the clips of the events in the video. If you have filtered the events using the search bar, the clips will only show the filtered events.</li>
+					<li><b>Help</b> button opens this help dialog.</li>
 				</ul>
 			</div>
 		</div>
@@ -779,6 +864,7 @@ class ListDisplay(QWidget):
 		title_font.setPointSize(14)
 		title_font.setBold(True)
 		title.setFont(title_font)
+		title.setObjectName("helpTitle")
 
 		subtitle = QLabel(self._help_subtitle(), header)
 		subtitle.setObjectName("helpSubtitle")
@@ -823,6 +909,10 @@ class ListDisplay(QWidget):
 				background: #1b1f2a;
 				border: 1px solid #2a3142;
 				border-radius: 10px;
+			}
+			#helpTitle {
+				color: #a9b1c6;
+				font-size: 14px;
 			}
 			#helpSubtitle {
 				color: #a9b1c6;

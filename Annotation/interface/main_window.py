@@ -40,7 +40,7 @@ class MainWindow(QMainWindow):
 			Qt.Key_R: "Pass Received",
 		},
 		Qt.Key_S: {
-			Qt.Key_U: "Spot Up",
+			# Qt.Key_U: "Spot Up",
 			Qt.Key_R: "Screener Rolling to Rim",
 			Qt.Key_P: "Screener Popping to 3P Line",
 			Qt.Key_G: "Screener Ghosts to 3P Line",
@@ -107,7 +107,7 @@ class MainWindow(QMainWindow):
 		"Free Throw",
 		"Post Up",
 		"Pass",
-		"Spot Up",
+		# "Spot Up",
 		"Screener Rolling to Rim",
 		"Screener Popping to 3P Line",
 		"Screener Ghosts to 3P Line",
@@ -348,23 +348,22 @@ class MainWindow(QMainWindow):
 
 		# Set the playback rate to normal
 		if event.key() == Qt.Key_F1 or event.key() == Qt.Key_A:
-			position = self.media_player.media_player.position()
-			self.media_player.media_player.setPlaybackRate(1.0)
-			self.media_player.media_player.setPosition(position)
+			self.media_player.set_playback_rate(1.0)
 			self.setFocus()
 
 		# Set the playback rate to x2
 		if event.key() == Qt.Key_F2 or event.key() == Qt.Key_Z:
-			position = self.media_player.media_player.position()
-			self.media_player.media_player.setPlaybackRate(2.0)
-			self.media_player.media_player.setPosition(position)
+			self.media_player.set_playback_rate(2.0)
 			self.setFocus()
 
 		# Set the playback rate to x4
 		if event.key() == Qt.Key_F3 or event.key() == Qt.Key_E:
-			position = self.media_player.media_player.position()
-			self.media_player.media_player.setPlaybackRate(4.0)
-			self.media_player.media_player.setPosition(position)
+			self.media_player.set_playback_rate(4.0)
+			self.setFocus()
+
+		# Set the playback rate to x1/2
+		if event.key() == Qt.Key_F4 or event.key() == Qt.Key_S:
+			self.media_player.set_playback_rate(0.5)
 			self.setFocus()
 
 		if event.key() == Qt.Key_Escape:

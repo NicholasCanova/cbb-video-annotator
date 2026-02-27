@@ -3,10 +3,10 @@ import os
 from bisect import bisect_left
 
 import cv2
-from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel, QGraphicsView, QGraphicsScene, QMessageBox, QDialog, QListWidget, QListWidgetItem, QDialogButtonBox, QSizePolicy
+from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel, QGraphicsView, QGraphicsScene, QMessageBox, QDialog, QListWidget, QListWidgetItem, QDialogButtonBox, QSizePolicy, QButtonGroup
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaMetaData
 from PyQt5.QtMultimediaWidgets import QGraphicsVideoItem
-from PyQt5.QtCore import Qt, QUrl, QEvent, QSizeF
+from PyQt5.QtCore import Qt, QUrl, QEvent, QSizeF, QSize
 
 from utils.event_class import ms_to_time
 
@@ -124,12 +124,69 @@ class MediaPlayer(QWidget):
 		self.play_button.setFocusPolicy(Qt.NoFocus)
 		self.play_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
+		self.speed_half_button = QPushButton("1/2x")
+		self.speed_half_button.setCheckable(True)
+		self.speed_half_button.clicked.connect(lambda: self.set_playback_rate(0.5))
+		self.speed_half_button.setFocusPolicy(Qt.NoFocus)
+		self.speed_half_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+
+		self.speed_normal_button = QPushButton("1x")
+		self.speed_normal_button.setCheckable(True)
+		self.speed_normal_button.clicked.connect(lambda: self.set_playback_rate(1.0))
+		self.speed_normal_button.setFocusPolicy(Qt.NoFocus)
+		self.speed_normal_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+
+		self.speed_double_button = QPushButton("2x")
+		self.speed_double_button.setCheckable(True)
+		self.speed_double_button.clicked.connect(lambda: self.set_playback_rate(2.0))
+		self.speed_double_button.setFocusPolicy(Qt.NoFocus)
+		self.speed_double_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+
+		self.speed_quad_button = QPushButton("4x")
+		self.speed_quad_button.setCheckable(True)
+		self.speed_quad_button.clicked.connect(lambda: self.set_playback_rate(4.0))
+		self.speed_quad_button.setFocusPolicy(Qt.NoFocus)
+		self.speed_quad_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+
+		self._speed_button_group = QButtonGroup(self)
+		self._speed_button_group.setExclusive(True)
+		self._speed_button_group.addButton(self.speed_half_button)
+		self._speed_button_group.addButton(self.speed_normal_button)
+		self._speed_button_group.addButton(self.speed_double_button)
+		self._speed_button_group.addButton(self.speed_quad_button)
+
+		self.set_playback_rate(1.0)
+
 		# Button for the slider
 		self.slider = QSlider(Qt.Horizontal)
 		self.slider.setRange(0, 0)
 		self.slider.sliderMoved.connect(self.set_position)
 		self.slider.sliderReleased.connect(self._slider_released)
 		self.slider.setFocusPolicy(Qt.NoFocus)
+
+		# Volume slider
+		self.volume_button = QPushButton()
+		self.volume_button.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
+		self.volume_button.setFlat(True)
+		self.volume_button.setFocusPolicy(Qt.NoFocus)
+
+		# Make the icon button *tight* (removes the big built-in padding/width)
+		self.volume_button.setFixedSize(24, 24)
+		self.volume_button.setIconSize(QSize(18, 18))
+		self.volume_button.setStyleSheet("QPushButton { padding: 0px; border: none; }")
+
+		self.volume_slider = QSlider(Qt.Horizontal)
+		self.volume_slider.setRange(0, 100)
+		self.volume_slider.setValue(self.media_player.volume() or 100)
+		self.volume_slider.sliderMoved.connect(self._set_volume)
+		self.volume_slider.valueChanged.connect(self._set_volume)
+		self.volume_slider.setFixedWidth(110)
+		self.volume_slider.setFocusPolicy(Qt.NoFocus)
+
+		self.help_button = QPushButton("Help")
+		self.help_button.clicked.connect(self._show_help_dialog)
+		self.help_button.setFocusPolicy(Qt.NoFocus)
+		self.help_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
 		self.pause_at_events_button = QPushButton("Pause At Tags")
 		self.pause_at_events_button.setCheckable(True)
@@ -153,9 +210,21 @@ class MediaPlayer(QWidget):
 		control_row.setSpacing(12)
 		control_row.addWidget(self.open_file_button)
 		control_row.addWidget(self.play_button)
+		control_row.addWidget(self.speed_half_button)
+		control_row.addWidget(self.speed_normal_button)
+		control_row.addWidget(self.speed_double_button)
+		control_row.addWidget(self.speed_quad_button)
 		control_row.addWidget(self.pause_at_events_button)
 		control_row.addWidget(self.pause_actions_button)
 		control_row.addWidget(self.filter_events_button)
+		volume_widget = QWidget()
+		volume_layout = QHBoxLayout(volume_widget)
+		volume_layout.setContentsMargins(0, 0, 0, 0)
+		volume_layout.setSpacing(2)
+		volume_layout.addWidget(self.volume_button)
+		volume_layout.addWidget(self.volume_slider)
+		control_row.addWidget(volume_widget)
+		control_row.addWidget(self.help_button)
 		control_row.addStretch(1)
 
 		# create vbox layout
@@ -222,6 +291,28 @@ class MediaPlayer(QWidget):
 			if getattr(self.main_window, "list_display", None):
 				self.main_window.list_display.list_widget.setCurrentRow(-1)
 			self.media_player.play()
+
+	def _show_help_dialog(self):
+		list_display = getattr(self.main_window, "list_display", None)
+		if list_display:
+			list_display._show_help()
+
+	def set_playback_rate(self, rate):
+		position = self.media_player.position()
+		self.media_player.setPlaybackRate(rate)
+		self.media_player.setPosition(position)
+
+		button_map = {
+			0.5: self.speed_half_button,
+			1.0: self.speed_normal_button,
+			2.0: self.speed_double_button,
+			4.0: self.speed_quad_button,
+		}
+		for r, btn in button_map.items():
+			btn.setChecked(r == rate)
+
+	def _set_volume(self, value):
+		self.media_player.setVolume(value)
 
 	def mediastate_changed(self, state):
 		if self.media_player.state() == QMediaPlayer.PlayingState:
@@ -362,7 +453,7 @@ class MediaPlayer(QWidget):
 		frame_duration = self.main_window.frame_duration_ms if self.main_window.frame_duration_ms else 40.0
 		frames_visible = max(1, int(round(2000.0 / frame_duration)))
 
-		events = []
+		event_entries = []
 		for event in sorted(self.main_window.list_manager.event_list, key=lambda e: getattr(e, "frame", float("inf"))):
 			event_frame = getattr(event, "frame", None)
 			if event_frame is None:
@@ -373,18 +464,24 @@ class MediaPlayer(QWidget):
 					label = event.label or "Event"
 					subtype = getattr(event, "subType", None)
 					if subtype and subtype != "None":
-						events.append(f"{label} ({subtype})")
+						text = f"{label} ({subtype})"
 					else:
-						events.append(label)
+						text = label
+					event_entries.append((text, event_frame))
 
-		if not events:
+		if not event_entries:
 			self._clear_pass_badges()
 			self.pass_label_container.hide()
 			return
 
-		self._populate_pass_badges(events)
+		self._populate_pass_badges([text for text, _ in event_entries])
 		self.pass_label_container.show()
 		self._position_pass_label()
+
+		list_display = getattr(self.main_window, "list_display", None)
+		if list_display:
+			closest_event = min(event_entries, key=lambda entry: abs(entry[1] - current_frame))
+			list_display.highlight_event_by_frame(closest_event[1])
 
 	def _position_pass_label(self):
 		if not self.pass_label_container.isVisible():
