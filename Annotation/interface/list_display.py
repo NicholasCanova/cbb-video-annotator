@@ -74,13 +74,26 @@ class ListDisplay(QWidget):
 		self.list_widget.clicked.connect(self._on_event_clicked)
 		self.layout.addWidget(self.list_widget)
 
-		self.play_clips_button = QPushButton("View Event Clips")
-		self.play_clips_button.clicked.connect(self._toggle_play_clips)
-		self.layout.addWidget(self.play_clips_button)
+		nav_layout = QHBoxLayout()
+		nav_layout.setContentsMargins(0, 0, 0, 0)
 
-		self.help_button = QPushButton("Help")
-		self.help_button.clicked.connect(self._show_help)
-		self.layout.addWidget(self.help_button)
+		self.prev_clip_button = QPushButton("<")
+		self.prev_clip_button.clicked.connect(lambda: self._step_clip(-1))
+		self.prev_clip_button.setEnabled(False)
+		nav_layout.addWidget(self.prev_clip_button)
+
+		self.play_clips_button = QPushButton("View Events")
+		self.play_clips_button.clicked.connect(self._toggle_play_clips)
+		nav_layout.addWidget(self.play_clips_button)
+
+		self.next_clip_button = QPushButton(">")
+		self.next_clip_button.clicked.connect(lambda: self._step_clip(1))
+		self.next_clip_button.setEnabled(False)
+		nav_layout.addWidget(self.next_clip_button)
+
+		nav_layout.addStretch(1)
+		self.layout.addLayout(nav_layout)
+
 
 		self._clip_sequence = []
 		self._current_clip_index = 0
@@ -224,6 +237,7 @@ class ListDisplay(QWidget):
 	def _toggle_play_clips(self):
 		if self._playing_clips:
 			self._stop_clip_sequence()
+			self._update_clip_nav_buttons()
 			return
 
 		if not self.main_window.media_player.play_button.isEnabled():
@@ -240,6 +254,7 @@ class ListDisplay(QWidget):
 		self._playing_clips = True
 		self._current_clip_index = 0
 		self.play_clips_button.setText("Stop Viewing Clips")
+		self._update_clip_nav_buttons()
 		self._play_next_clip()
 
 	def _build_clip_sequence(self, events):
@@ -264,6 +279,16 @@ class ListDisplay(QWidget):
 			sequence.append({"row": idx, "start": start, "end": end})
 		return sequence
 
+	def _step_clip(self, delta):
+		if not self._playing_clips or not self._clip_sequence:
+			return
+		target = self._current_clip_index + delta
+		target = max(0, min(len(self._clip_sequence) - 1, target))
+		if target == self._current_clip_index:
+			return
+		self._current_clip_index = target
+		self._play_next_clip()
+
 	def _play_next_clip(self):
 		self._clip_pause_timer.stop()
 		if not self._playing_clips or self._current_clip_index >= len(self._clip_sequence):
@@ -281,6 +306,7 @@ class ListDisplay(QWidget):
 		player = self.main_window.media_player.media_player
 		player.play()
 		self.main_window.setFocus()
+		self._update_clip_nav_buttons()
 
 	def _stop_clip_sequence(self):
 		self._clip_pause_timer.stop()
@@ -295,6 +321,14 @@ class ListDisplay(QWidget):
 		self.main_window.media_player.media_player.pause()
 		self.list_widget.setCurrentRow(-1)
 		self._update_event_info(None)
+		self._update_clip_nav_buttons()
+
+	def _update_clip_nav_buttons(self):
+		playing = self._playing_clips and bool(self._clip_sequence)
+		self.prev_clip_button.setEnabled(playing and self._current_clip_index > 0)
+		self.next_clip_button.setEnabled(
+			playing and self._current_clip_index < max(0, len(self._clip_sequence) - 1)
+		)
 
 	def _update_event_info(self, event):
 		self.main_window.media_player.display_event_info(event)

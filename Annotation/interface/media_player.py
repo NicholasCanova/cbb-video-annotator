@@ -183,6 +183,11 @@ class MediaPlayer(QWidget):
 		self.volume_slider.setFixedWidth(110)
 		self.volume_slider.setFocusPolicy(Qt.NoFocus)
 
+		self.help_button = QPushButton("Help")
+		self.help_button.clicked.connect(self._show_help_dialog)
+		self.help_button.setFocusPolicy(Qt.NoFocus)
+		self.help_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+
 		self.pause_at_events_button = QPushButton("Pause At Tags")
 		self.pause_at_events_button.setCheckable(True)
 		self.pause_at_events_button.toggled.connect(self._set_pause_at_events)
@@ -212,8 +217,14 @@ class MediaPlayer(QWidget):
 		control_row.addWidget(self.pause_at_events_button)
 		control_row.addWidget(self.pause_actions_button)
 		control_row.addWidget(self.filter_events_button)
-		control_row.addWidget(self.volume_button)
-		control_row.addWidget(self.volume_slider)
+		volume_widget = QWidget()
+		volume_layout = QHBoxLayout(volume_widget)
+		volume_layout.setContentsMargins(0, 0, 0, 0)
+		volume_layout.setSpacing(2)
+		volume_layout.addWidget(self.volume_button)
+		volume_layout.addWidget(self.volume_slider)
+		control_row.addWidget(volume_widget)
+		control_row.addWidget(self.help_button)
 		control_row.addStretch(1)
 
 		# create vbox layout
@@ -280,6 +291,11 @@ class MediaPlayer(QWidget):
 			if getattr(self.main_window, "list_display", None):
 				self.main_window.list_display.list_widget.setCurrentRow(-1)
 			self.media_player.play()
+
+	def _show_help_dialog(self):
+		list_display = getattr(self.main_window, "list_display", None)
+		if list_display:
+			list_display._show_help()
 
 	def set_playback_rate(self, rate):
 		position = self.media_player.position()
