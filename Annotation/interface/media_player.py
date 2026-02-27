@@ -3,7 +3,7 @@ import os
 from bisect import bisect_left
 
 import cv2
-from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel, QGraphicsView, QGraphicsScene, QMessageBox, QDialog, QListWidget, QListWidgetItem, QDialogButtonBox, QSizePolicy
+from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel, QGraphicsView, QGraphicsScene, QMessageBox, QDialog, QListWidget, QListWidgetItem, QDialogButtonBox, QSizePolicy, QButtonGroup
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaMetaData
 from PyQt5.QtMultimediaWidgets import QGraphicsVideoItem
 from PyQt5.QtCore import Qt, QUrl, QEvent, QSizeF, QSize
@@ -125,24 +125,37 @@ class MediaPlayer(QWidget):
 		self.play_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
 		self.speed_half_button = QPushButton("1/2x")
-		self.speed_half_button.clicked.connect(lambda: self._set_playback_rate(0.5))
+		self.speed_half_button.setCheckable(True)
+		self.speed_half_button.clicked.connect(lambda: self.set_playback_rate(0.5))
 		self.speed_half_button.setFocusPolicy(Qt.NoFocus)
 		self.speed_half_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
 		self.speed_normal_button = QPushButton("1x")
-		self.speed_normal_button.clicked.connect(lambda: self._set_playback_rate(1.0))
+		self.speed_normal_button.setCheckable(True)
+		self.speed_normal_button.clicked.connect(lambda: self.set_playback_rate(1.0))
 		self.speed_normal_button.setFocusPolicy(Qt.NoFocus)
 		self.speed_normal_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
 		self.speed_double_button = QPushButton("2x")
-		self.speed_double_button.clicked.connect(lambda: self._set_playback_rate(2.0))
+		self.speed_double_button.setCheckable(True)
+		self.speed_double_button.clicked.connect(lambda: self.set_playback_rate(2.0))
 		self.speed_double_button.setFocusPolicy(Qt.NoFocus)
 		self.speed_double_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
 		self.speed_quad_button = QPushButton("4x")
-		self.speed_quad_button.clicked.connect(lambda: self._set_playback_rate(4.0))
+		self.speed_quad_button.setCheckable(True)
+		self.speed_quad_button.clicked.connect(lambda: self.set_playback_rate(4.0))
 		self.speed_quad_button.setFocusPolicy(Qt.NoFocus)
 		self.speed_quad_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+
+		self._speed_button_group = QButtonGroup(self)
+		self._speed_button_group.setExclusive(True)
+		self._speed_button_group.addButton(self.speed_half_button)
+		self._speed_button_group.addButton(self.speed_normal_button)
+		self._speed_button_group.addButton(self.speed_double_button)
+		self._speed_button_group.addButton(self.speed_quad_button)
+
+		self.set_playback_rate(1.0)
 
 		# Button for the slider
 		self.slider = QSlider(Qt.Horizontal)
@@ -268,10 +281,19 @@ class MediaPlayer(QWidget):
 				self.main_window.list_display.list_widget.setCurrentRow(-1)
 			self.media_player.play()
 
-	def _set_playback_rate(self, rate):
+	def set_playback_rate(self, rate):
 		position = self.media_player.position()
 		self.media_player.setPlaybackRate(rate)
 		self.media_player.setPosition(position)
+
+		button_map = {
+			0.5: self.speed_half_button,
+			1.0: self.speed_normal_button,
+			2.0: self.speed_double_button,
+			4.0: self.speed_quad_button,
+		}
+		for r, btn in button_map.items():
+			btn.setChecked(r == rate)
 
 	def _set_volume(self, value):
 		self.media_player.setVolume(value)
