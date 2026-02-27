@@ -513,7 +513,17 @@ class ListDisplay(QWidget):
 				<ul>
 					<li>Click <b>Open Video</b> to load <code>1.mov</code> with <code>Labels-v2.json</code> in the same folder.</li>
 					<li>Space toggles play/pause. Arrow keys step. Use modifiers for bigger jumps (Shift = 5 frames, Command = 10, Shift+Command = 50).</li>
-					<li>A = ×1 speed, Z = ×2, E = ×4.</li>
+					<li>Playback speed: A = 1x speed, Z = 2x, E = 4x, S = 1/2x.</li>
+				</ul>
+			</div>
+		</div>
+
+		<div class="card">
+			<div class="cardTitle">Creating New Events</div>
+			<div class="cardBody">
+				<ul>
+					<li>Navigate to the frame where the event occurs.</li>
+					<li>Press <b>ENTER</b> to create a generic event, or use a hotkey below to create a specific action.</li>
 				</ul>
 			</div>
 		</div>
@@ -529,11 +539,27 @@ class ListDisplay(QWidget):
 		</div>
 
 		<div class="card">
-			<div class="cardTitle">Creating New Events</div>
+			<div class="cardTitle">Bottom Bar Controls</div>
 			<div class="cardBody">
 				<ul>
-					<li>Navigate to the frame where the event occurs.</li>
-					<li>Press <b>ENTER</b> to create a generic event, or use a hotkey below to create a specific action.</li>
+					<li>The playback speed can be set to 1x, 2x, 4x, or 1/2x using the buttons.</li>
+					<li><b>Play/Pause</b> button toggles the video playback.</li>
+					<li><b>Pause at Tags</b> button pauses the video at the tags in the video.</li>
+					<li><b>Choose Pause Actions</b> button allows you to choose the actions to pause the video at when using the <b>Pause at Tags</b> button.</li>
+					<li><b>Filter Displayed Events</b> button allows you to filter the events displayed in red at the top of the video.</li>
+					<li>The volume can be adjusted using the volume slider.</li>
+				</ul>
+			</div>
+		</div>
+
+		<div class="card">
+			<div class="cardTitle">Right Sidebar</div>
+			<div class="cardBody">
+				<ul>
+					<li>The right sidebar displays the events in the video. You can click on an event to edit it or delete it.</li>
+					<li>The search bar at the top of the right sidebar allows you to search for events by label.</li>
+					<li><b>View Event Clips</b> button allows you to view the clips of the events in the video. If you have filtered the events using the search bar, the clips will only show the filtered events.</li>
+					<li><b>Help</b> button opens this help dialog.</li>
 				</ul>
 			</div>
 		</div>
@@ -779,6 +805,7 @@ class ListDisplay(QWidget):
 		title_font.setPointSize(14)
 		title_font.setBold(True)
 		title.setFont(title_font)
+		title.setObjectName("helpTitle")
 
 		subtitle = QLabel(self._help_subtitle(), header)
 		subtitle.setObjectName("helpSubtitle")
@@ -823,6 +850,10 @@ class ListDisplay(QWidget):
 				background: #1b1f2a;
 				border: 1px solid #2a3142;
 				border-radius: 10px;
+			}
+			#helpTitle {
+				color: #a9b1c6;
+				font-size: 14px;
 			}
 			#helpSubtitle {
 				color: #a9b1c6;
