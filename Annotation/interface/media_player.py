@@ -124,6 +124,26 @@ class MediaPlayer(QWidget):
 		self.play_button.setFocusPolicy(Qt.NoFocus)
 		self.play_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
+		self.speed_half_button = QPushButton("1/2x")
+		self.speed_half_button.clicked.connect(lambda: self._set_playback_rate(0.5))
+		self.speed_half_button.setFocusPolicy(Qt.NoFocus)
+		self.speed_half_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+
+		self.speed_normal_button = QPushButton("1x")
+		self.speed_normal_button.clicked.connect(lambda: self._set_playback_rate(1.0))
+		self.speed_normal_button.setFocusPolicy(Qt.NoFocus)
+		self.speed_normal_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+
+		self.speed_double_button = QPushButton("2x")
+		self.speed_double_button.clicked.connect(lambda: self._set_playback_rate(2.0))
+		self.speed_double_button.setFocusPolicy(Qt.NoFocus)
+		self.speed_double_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+
+		self.speed_quad_button = QPushButton("4x")
+		self.speed_quad_button.clicked.connect(lambda: self._set_playback_rate(4.0))
+		self.speed_quad_button.setFocusPolicy(Qt.NoFocus)
+		self.speed_quad_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+
 		# Button for the slider
 		self.slider = QSlider(Qt.Horizontal)
 		self.slider.setRange(0, 0)
@@ -153,6 +173,10 @@ class MediaPlayer(QWidget):
 		control_row.setSpacing(12)
 		control_row.addWidget(self.open_file_button)
 		control_row.addWidget(self.play_button)
+		control_row.addWidget(self.speed_half_button)
+		control_row.addWidget(self.speed_normal_button)
+		control_row.addWidget(self.speed_double_button)
+		control_row.addWidget(self.speed_quad_button)
 		control_row.addWidget(self.pause_at_events_button)
 		control_row.addWidget(self.pause_actions_button)
 		control_row.addWidget(self.filter_events_button)
@@ -222,6 +246,11 @@ class MediaPlayer(QWidget):
 			if getattr(self.main_window, "list_display", None):
 				self.main_window.list_display.list_widget.setCurrentRow(-1)
 			self.media_player.play()
+
+	def _set_playback_rate(self, rate):
+		position = self.media_player.position()
+		self.media_player.setPlaybackRate(rate)
+		self.media_player.setPosition(position)
 
 	def mediastate_changed(self, state):
 		if self.media_player.state() == QMediaPlayer.PlayingState:
