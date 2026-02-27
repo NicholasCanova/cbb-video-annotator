@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (
 	QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QListWidget, QLineEdit,
 	QCompleter, QApplication, QDialog, QLabel, QTextBrowser, QFrame,
-	QTableWidget, QTableWidgetItem, QHeaderView
+	QTableWidget, QTableWidgetItem, QHeaderView, QStyle, QSizePolicy
 )
 from PyQt5.QtCore import Qt, QStringListModel, QEvent, QTimer
 from PyQt5.QtMultimedia import QMediaPlayer
@@ -77,19 +77,39 @@ class ListDisplay(QWidget):
 		nav_layout = QHBoxLayout()
 		nav_layout.setContentsMargins(0, 0, 0, 0)
 
-		self.prev_clip_button = QPushButton("<")
+		self.prev_clip_button = QPushButton()
+		self.prev_clip_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekBackward))
+		self.prev_clip_button.setFlat(True)
 		self.prev_clip_button.clicked.connect(lambda: self._step_clip(-1))
 		self.prev_clip_button.setEnabled(False)
+		self.prev_clip_button.setFixedWidth(28)
+		self.prev_clip_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
 		nav_layout.addWidget(self.prev_clip_button)
 
-		self.play_clips_button = QPushButton("View Events")
+		self.play_clips_button = QPushButton("View Event Clips")
 		self.play_clips_button.clicked.connect(self._toggle_play_clips)
+		self.play_clips_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
 		nav_layout.addWidget(self.play_clips_button)
 
-		self.next_clip_button = QPushButton(">")
+		self.next_clip_button = QPushButton()
+		self.next_clip_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekForward))
+		self.next_clip_button.setFlat(True)
 		self.next_clip_button.clicked.connect(lambda: self._step_clip(1))
 		self.next_clip_button.setEnabled(False)
+		self.next_clip_button.setFixedWidth(28)
+		self.next_clip_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
 		nav_layout.addWidget(self.next_clip_button)
+
+		self.loop_clip_button = QPushButton()
+		self.loop_clip_button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
+		self.loop_clip_button.setFlat(True)
+		self.loop_clip_button.setCheckable(True)
+		self.loop_clip_button.setEnabled(False)
+		self.loop_clip_button.clicked.connect(self._toggle_clip_loop)
+		self.loop_clip_button.setFixedWidth(28)
+		self.loop_clip_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+		nav_layout.addWidget(self.loop_clip_button)
+		self._clip_loop_enabled = False
 
 		nav_layout.addStretch(1)
 		self.layout.addLayout(nav_layout)
@@ -329,6 +349,10 @@ class ListDisplay(QWidget):
 		self.next_clip_button.setEnabled(
 			playing and self._current_clip_index < max(0, len(self._clip_sequence) - 1)
 		)
+		self.loop_clip_button.setEnabled(playing)
+
+	def _toggle_clip_loop(self, checked):
+		self._clip_loop_enabled = bool(checked)
 
 	def _update_event_info(self, event):
 		self.main_window.media_player.display_event_info(event)
@@ -343,7 +367,8 @@ class ListDisplay(QWidget):
 
 		if position >= self._current_clip_end:
 			player.pause()
-			self._current_clip_index += 1
+			if not self._clip_loop_enabled:
+				self._current_clip_index += 1
 			self._current_clip_end = None
 
 			if self._current_clip_index >= len(self._clip_sequence):
