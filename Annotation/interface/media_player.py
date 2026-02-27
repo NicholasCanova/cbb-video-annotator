@@ -6,7 +6,7 @@ import cv2
 from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel, QGraphicsView, QGraphicsScene, QMessageBox, QDialog, QListWidget, QListWidgetItem, QDialogButtonBox, QSizePolicy
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaMetaData
 from PyQt5.QtMultimediaWidgets import QGraphicsVideoItem
-from PyQt5.QtCore import Qt, QUrl, QEvent, QSizeF
+from PyQt5.QtCore import Qt, QUrl, QEvent, QSizeF, QSize
 
 from utils.event_class import ms_to_time
 
@@ -151,6 +151,25 @@ class MediaPlayer(QWidget):
 		self.slider.sliderReleased.connect(self._slider_released)
 		self.slider.setFocusPolicy(Qt.NoFocus)
 
+		# Volume slider
+		self.volume_button = QPushButton()
+		self.volume_button.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
+		self.volume_button.setFlat(True)
+		self.volume_button.setFocusPolicy(Qt.NoFocus)
+
+		# Make the icon button *tight* (removes the big built-in padding/width)
+		self.volume_button.setFixedSize(24, 24)
+		self.volume_button.setIconSize(QSize(18, 18))
+		self.volume_button.setStyleSheet("QPushButton { padding: 0px; border: none; }")
+
+		self.volume_slider = QSlider(Qt.Horizontal)
+		self.volume_slider.setRange(0, 100)
+		self.volume_slider.setValue(self.media_player.volume() or 100)
+		self.volume_slider.sliderMoved.connect(self._set_volume)
+		self.volume_slider.valueChanged.connect(self._set_volume)
+		self.volume_slider.setFixedWidth(110)
+		self.volume_slider.setFocusPolicy(Qt.NoFocus)
+
 		self.pause_at_events_button = QPushButton("Pause At Tags")
 		self.pause_at_events_button.setCheckable(True)
 		self.pause_at_events_button.toggled.connect(self._set_pause_at_events)
@@ -180,6 +199,8 @@ class MediaPlayer(QWidget):
 		control_row.addWidget(self.pause_at_events_button)
 		control_row.addWidget(self.pause_actions_button)
 		control_row.addWidget(self.filter_events_button)
+		control_row.addWidget(self.volume_button)
+		control_row.addWidget(self.volume_slider)
 		control_row.addStretch(1)
 
 		# create vbox layout
@@ -251,6 +272,9 @@ class MediaPlayer(QWidget):
 		position = self.media_player.position()
 		self.media_player.setPlaybackRate(rate)
 		self.media_player.setPosition(position)
+
+	def _set_volume(self, value):
+		self.media_player.setVolume(value)
 
 	def mediastate_changed(self, state):
 		if self.media_player.state() == QMediaPlayer.PlayingState:
