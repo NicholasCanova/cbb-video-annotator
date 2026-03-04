@@ -228,6 +228,7 @@ class EventSelectionWindow(QMainWindow):
 
 			self.third_label = item.text()
 			self.step = Step.FOURTH
+			self._set_column_visibility(show_second=True, show_third=True, show_fourth=True)
 			self._enter_step(self.list_widget_fourth)
 
 		elif self.step == Step.FOURTH:
