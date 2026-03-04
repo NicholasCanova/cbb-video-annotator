@@ -8,5 +8,6 @@
 	"Handoff": ["Left", "Right"],
 	"On Ball Screen": ["Left", "Right"],
 	"Cut": ["Cut", "Flash"],
-	"Pass Received": ["None", "Cutter Receives Pass"]
+	"Pass Received": ["None", "Cutter Receives Pass"],
+	"Defenders Switch": ["On-Ball", "Off-Ball"]
 }
