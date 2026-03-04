@@ -398,12 +398,20 @@ class EventSelectionWindow(QMainWindow):
 			return False
 
 		second_match = self._match_and_select(self.list_widget_second, event.subType)
-		if second_match:
-			self.second_label = second_match
-			self.step = Step.THIRD
-			self._enter_step(self.list_widget_third)
-			self._match_and_select(self.list_widget_third, event.visibility)
-		else:
+		if not second_match:
 			self.step = Step.SECOND
+			return True
+
+		self.second_label = second_match
+
+		has_third = self._populate_third_list(self.first_label)
+		if not has_third:
+			self.step = Step.FOURTH
+			self._enter_step(self.list_widget_fourth)
+			return True
+
+		self.step = Step.THIRD
+		self._enter_step(self.list_widget_third)
+		self.third_label = self._match_and_select(self.list_widget_third, event.visibility)
 
 		return True
