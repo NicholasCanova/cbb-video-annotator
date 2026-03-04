@@ -6,17 +6,17 @@
             "frame": "50",
             "gameTime": "1 - 00:01",
             "label": "Off Ball Screen",
-            "position": "1669",
-            "subType": "Left",
-            "visibility": "visible"
+            "position": "1668",
+            "subType": "Right",
+            "visibility": "None"
         },
         {
             "frame": "121",
             "gameTime": "1 - 00:04",
             "label": "Off Ball Screen",
-            "position": "4044",
-            "subType": "Right",
-            "visibility": "visible"
+            "position": "4041",
+            "subType": "Left",
+            "visibility": "None"
         },
         {
             "frame": "133",

@@ -39,22 +39,26 @@ class EventSelectionWindow(QMainWindow):
 		# Allow the code to be run from any working directory
 		base = Path(__file__).resolve().parent
 
+		# Read the available labels for action types and subtypes
 		self.labels = self._read_labels(base / "../config/classes.txt")
 		self.label_map = self._read_label_map(base / "../config/second_classes.json")
 		self.third_label_map = self._read_label_map(base / "../config/third_classes.json")
 		self.fourth_labels = self._read_labels(base / "../config/fourth_classes.txt")
 
-
+		# Setup the list widgets
 		self.list_widget = QListWidget()
 		self.list_widget_second = QListWidget()
 		self.list_widget_third = QListWidget()
 		self.list_widget_fourth = QListWidget()
 
+		# Populate the first list widget (main action types)
 		for item_nbr, element in enumerate(self.labels):
 			self.list_widget.insertItem(item_nbr, element)
 			
 		self._populate_second_list(None)
 		self._populate_third_list(None)
+
+		# Populate the fourth list widget (visibility types)
 		for item_nbr, element in enumerate(self.fourth_labels):
 			self.list_widget_fourth.insertItem(item_nbr, element)
 
@@ -104,17 +108,18 @@ class EventSelectionWindow(QMainWindow):
 
 		return mapping
 
-	def _labels_for(self, first_label: str):
+	def _labels_for(self, first_label, label_map):
 		if first_label:
-			options = self.label_map.get(first_label)
+			options = label_map.get(first_label)
 			if options:
 				return options
 
-		return self.label_map.get("default", [])
+		return label_map.get("default", [])
 
 	def _populate_second_list(self, first_label):
+		# Clear the second list widget and get the subtypes for the first label
 		self.list_widget_second.clear()
-		options = self._labels_for(first_label)
+		options = self._labels_for(first_label, self.label_map)
 
 		for item_nbr, element in enumerate(options):
 			self.list_widget_second.insertItem(item_nbr, element)
@@ -131,16 +136,10 @@ class EventSelectionWindow(QMainWindow):
 
 		return has_second
 
-	def _third_labels_for(self, first_label: str):
-		if first_label:
-			options = self.third_label_map.get(first_label)
-			if options:
-				return options
-		return self.third_label_map.get("default", [])
-
 	def _populate_third_list(self, first_label):
 		self.list_widget_third.clear()
-		options = self._third_labels_for(first_label)
+		options = self._labels_for(first_label, self.third_label_map)
+
 		for item_nbr, element in enumerate(options):
 			self.list_widget_third.insertItem(item_nbr, element)
 		return bool(options)
@@ -229,6 +228,7 @@ class EventSelectionWindow(QMainWindow):
 
 			self.third_label = item.text()
 			self.step = Step.FOURTH
+			self._set_column_visibility(show_second=True, show_third=True, show_fourth=True)
 			self._enter_step(self.list_widget_fourth)
 
 		elif self.step == Step.FOURTH:
@@ -276,6 +276,37 @@ class EventSelectionWindow(QMainWindow):
 			self.list_widget_second.setCurrentRow(-1)
 			self.second_label = None
 			self._populate_second_list(None)
+			self._enter_step(self.list_widget)
+			return
+		
+		if self.step == Step.FOURTH:
+			first_label = self.first_label
+			self.list_widget_fourth.setCurrentRow(-1)
+			self.fourth_label = None
+
+			has_third = bool(first_label and self.third_label_map.get(first_label))
+			has_second = bool(first_label and self.label_map.get(first_label))
+
+			if has_third:
+				self.step = Step.THIRD
+				self._set_column_visibility(show_second=True, show_third=True, show_fourth=True)
+				if self.third_label:
+					self._match_and_select(self.list_widget_third, self.third_label)
+				self._enter_step(self.list_widget_third)
+				return
+
+			if has_second:
+				self.step = Step.SECOND
+				self._set_column_visibility(show_second=True, show_third=False, show_fourth=True)
+				if self.second_label:
+					self._match_and_select(self.list_widget_second, self.second_label)
+				self._enter_step(self.list_widget_second)
+				return
+
+			self.step = Step.FIRST
+			self._set_column_visibility(show_second=False, show_third=False, show_fourth=True)
+			if self.first_label:
+				self._match_and_select(self.list_widget, self.first_label)
 			self._enter_step(self.list_widget)
 			return
 
@@ -368,12 +399,20 @@ class EventSelectionWindow(QMainWindow):
 			return False
 
 		second_match = self._match_and_select(self.list_widget_second, event.subType)
-		if second_match:
-			self.second_label = second_match
-			self.step = Step.THIRD
-			self._enter_step(self.list_widget_third)
-			self._match_and_select(self.list_widget_third, event.visibility)
-		else:
+		if not second_match:
 			self.step = Step.SECOND
+			return True
+
+		self.second_label = second_match
+
+		has_third = self._populate_third_list(self.first_label)
+		if not has_third:
+			self.step = Step.FOURTH
+			self._enter_step(self.list_widget_fourth)
+			return True
+
+		self.step = Step.THIRD
+		self._enter_step(self.list_widget_third)
+		self.third_label = self._match_and_select(self.list_widget_third, event.visibility)
 
 		return True
