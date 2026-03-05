@@ -85,7 +85,7 @@ class ListManager:
 				return event.frame
 			return getattr(event, "position", 0)
 
-		self.event_list = sorted(self.event_list, key=sort_key, reverse=True)
+		self.event_list = sorted(self.event_list, key=sort_key, reverse=False)
 
 	def soccerNetToV2(self,label):
 
