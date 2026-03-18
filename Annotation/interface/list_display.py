@@ -78,6 +78,7 @@ class ListDisplay(QWidget):
 		self.settings_button.setFlat(True)
 		self.settings_button.setFocusPolicy(Qt.NoFocus)
 		self.settings_button.setToolTip("Settings")
+		self.settings_button.setStyleSheet("font-size: 20pt; padding: 0;")
 		self.settings_button.clicked.connect(self.main_window.open_settings)
 
 		self._filter_layout.addWidget(self.search_input)
