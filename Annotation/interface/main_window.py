@@ -1,12 +1,201 @@
 from re import M
-from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QMessageBox
-from PyQt5.QtGui import QPalette
+from PyQt5.QtWidgets import (
+	QMainWindow, QWidget, QHBoxLayout, QMessageBox, QApplication, QStyle,
+	QDialog, QVBoxLayout, QRadioButton, QButtonGroup, QDialogButtonBox, QLabel, QFrame
+)
+from PyQt5.QtGui import QPalette, QIcon, QPixmap, QPainter, QColor
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtMultimedia import QMediaPlayer
+
+LIGHT_STYLESHEET = """
+QWidget {
+    background-color: #f0f0f0;
+    color: #1a1a1a;
+}
+QPushButton {
+    background-color: #e0e0e0;
+    color: #1a1a1a;
+    border: 1px solid #b0b0b0;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+QPushButton:hover { background-color: #d0d0d0; }
+QPushButton:checked, QPushButton:pressed { background-color: #b8b8b8; }
+QPushButton:disabled {
+    color: #909090;
+    background-color: #e8e8e8;
+    border-color: #c8c8c8;
+}
+QListWidget {
+    background-color: #ffffff;
+    color: #1a1a1a;
+    border: 1px solid #b0b0b0;
+    border-radius: 4px;
+}
+QListWidget::item:selected { background-color: #0078d4; color: #ffffff; }
+QListWidget::item:hover { background-color: #e8e8e8; }
+QLineEdit {
+    background-color: #ffffff;
+    color: #1a1a1a;
+    border: 1px solid #b0b0b0;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+QSlider::groove:horizontal {
+    background: #c0c0c0;
+    height: 4px;
+    border-radius: 2px;
+}
+QSlider::handle:horizontal {
+    background: #505050;
+    width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    margin: -4px 0;
+}
+QSlider::sub-page:horizontal { background: #0078d4; border-radius: 2px; }
+QGraphicsView { background-color: black; border: none; }
+QDialog { background-color: #f0f0f0; }
+QLabel { background: transparent; }
+QTableWidget {
+    background-color: #ffffff;
+    alternate-background-color: #eeeeee;
+    color: #1a1a1a;
+    border: 1px solid #b0b0b0;
+    gridline-color: #e0e0e0;
+}
+QTableWidget::item:selected { background-color: #0078d4; color: #ffffff; }
+QTableWidget::item:hover { background-color: #e8e8e8; }
+QHeaderView::section {
+    background-color: #e0e0e0;
+    color: #1a1a1a;
+    border: none;
+    border-bottom: 1px solid #b0b0b0;
+    padding: 3px 6px;
+    font-weight: bold;
+}
+QScrollBar:vertical {
+    background: #e0e0e0;
+    width: 8px;
+    border-radius: 4px;
+}
+QScrollBar::handle:vertical {
+    background: #a0a0a0;
+    border-radius: 4px;
+    min-height: 20px;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
+QScrollBar:horizontal {
+    background: #e0e0e0;
+    height: 8px;
+    border-radius: 4px;
+}
+QScrollBar::handle:horizontal {
+    background: #a0a0a0;
+    border-radius: 4px;
+    min-width: 20px;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
+"""
+
+DARK_STYLESHEET = """
+QWidget {
+    background-color: #111318;
+    color: #e6e9f2;
+}
+QPushButton {
+    background-color: #1b1f2a;
+    color: #e6e9f2;
+    border: 1px solid #2a3142;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+QPushButton:hover { background-color: #22283a; }
+QPushButton:checked, QPushButton:pressed { background-color: #2a3142; }
+QPushButton:disabled {
+    color: #555c70;
+    background-color: #141826;
+    border-color: #1e2332;
+}
+QListWidget {
+    background-color: #0f1117;
+    color: #e6e9f2;
+    border: 1px solid #2a3142;
+    border-radius: 4px;
+}
+QListWidget::item:selected { background-color: #2a3142; color: #ffffff; }
+QListWidget::item:hover { background-color: #1b1f2a; }
+QLineEdit {
+    background-color: #0f1117;
+    color: #e6e9f2;
+    border: 1px solid #2a3142;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+QSlider::groove:horizontal {
+    background: #2a3142;
+    height: 4px;
+    border-radius: 2px;
+}
+QSlider::handle:horizontal {
+    background: #e6e9f2;
+    width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    margin: -4px 0;
+}
+QSlider::sub-page:horizontal { background: #5a7fc0; border-radius: 2px; }
+QGraphicsView { background-color: black; border: none; }
+QDialog { background-color: #111318; }
+QLabel { background: transparent; }
+QTableWidget {
+    background-color: #0f1117;
+    alternate-background-color: #141826;
+    color: #e6e9f2;
+    border: 1px solid #2a3142;
+    gridline-color: #1b1f2a;
+}
+QTableWidget::item:selected { background-color: #2a3142; color: #ffffff; }
+QTableWidget::item:hover { background-color: #1b1f2a; }
+QHeaderView::section {
+    background-color: #141826;
+    color: #a9b1c6;
+    border: none;
+    border-bottom: 1px solid #2a3142;
+    padding: 3px 6px;
+    font-weight: bold;
+}
+QScrollBar:vertical {
+    background: #0f1117;
+    width: 8px;
+    border-radius: 4px;
+}
+QScrollBar::handle:vertical {
+    background: #2a3142;
+    border-radius: 4px;
+    min-height: 20px;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
+QScrollBar:horizontal {
+    background: #0f1117;
+    height: 8px;
+    border-radius: 4px;
+}
+QScrollBar::handle:horizontal {
+    background: #2a3142;
+    border-radius: 4px;
+    min-width: 20px;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
+"""
 
 from interface.media_player import MediaPlayer
 from interface.list_display import ListDisplay
 from interface.event_selection import EventSelectionWindow
+try:
+	from interface.pbp_display import PBPDisplay
+except Exception:
+	PBPDisplay = None
 from utils.list_management import ListManager
 from utils.event_class import Event, ms_to_time
 
@@ -42,8 +231,8 @@ class MainWindow(QMainWindow):
 		Qt.Key_S: {
 			# Qt.Key_U: "Spot Up",
 			Qt.Key_R: "Screener Rolling to Rim",
-			Qt.Key_P: "Screener Popping to 3P Line",
-			Qt.Key_G: "Screener Ghosts to 3P Line",
+			Qt.Key_P: "Screener Popping",
+			Qt.Key_G: "Screener Ghosting",
 			Qt.Key_S: "Screener Slipping the Screen",
 			Qt.Key_T: "Steal",
 			Qt.Key_F: "Shooting Foul",
@@ -67,6 +256,7 @@ class MainWindow(QMainWindow):
 			Qt.Key_U: "Roller Defender Up on Screen",
 			Qt.Key_D: "Roller Defender Dropping",
 			Qt.Key_H: "Roller Defender Hedging",
+			Qt.Key_L: "Roller Defender at the Level"
 		},
 		Qt.Key_At: { # Shift + 2
 			Qt.Key_P: "2P Shot",
@@ -109,8 +299,8 @@ class MainWindow(QMainWindow):
 		"Pass",
 		# "Spot Up",
 		"Screener Rolling to Rim",
-		"Screener Popping to 3P Line",
-		"Screener Ghosts to 3P Line",
+		"Screener Popping",
+		"Screener Ghosting",
 		"Screener Slipping the Screen",
 		"Isolation",
 		"Cut",
@@ -118,6 +308,7 @@ class MainWindow(QMainWindow):
 		"Roller Defender Up on Screen",
 		"Roller Defender Dropping",
 		"Roller Defender Hedging",
+		"Roller Defender at the Level",
 		"Defensive Rebound",
 		"Offensive Rebound",
 		"2P Shot",
@@ -152,6 +343,7 @@ class MainWindow(QMainWindow):
 		self.video_frame_rate = None
 
 		self.half = 1
+		self.dark_mode = False
 		self.editing_event = False
 		self.edit_event_obj = None
 		self.edit_event_original = None
@@ -172,6 +364,9 @@ class MainWindow(QMainWindow):
 
 		# Initiate the sub-widgets
 		self.init_main_window()
+
+		# Apply initial theme so layout geometry is consistent from the start
+		QApplication.instance().setStyleSheet(LIGHT_STYLESHEET)
 
 		# Show the window
 		self.show()
@@ -194,21 +389,30 @@ class MainWindow(QMainWindow):
 		self.list_manager = ListManager()
 		self.list_display = ListDisplay(self)
 
+		# Create the PBP display (hidden until a video with pbp.csv is opened)
+		self.pbp_display = PBPDisplay(self) if PBPDisplay else None
+
 		# Create the Event selection Window
 		self.event_window = EventSelectionWindow(self)
 
 		self.list_display.display_list()
 
-
 		# Layout the different widgets
 		central_display = QWidget(self)
 		self.setCentralWidget(central_display)
 
-		final_layout = QHBoxLayout()
-		final_layout.addWidget(video_display)
-		final_layout.addWidget(self.list_display)
+		top_layout = QHBoxLayout()
+		top_layout.addWidget(video_display)
+		top_layout.addWidget(self.list_display)
 
-		central_display.setLayout(final_layout)
+		main_layout = QVBoxLayout()
+		main_layout.setContentsMargins(0, 0, 0, 0)
+		main_layout.setSpacing(0)
+		main_layout.addLayout(top_layout)
+		if self.pbp_display:
+			main_layout.addWidget(self.pbp_display)
+
+		central_display.setLayout(main_layout)
 
 	def keyPressEvent(self, event):
 		ctrl = False
@@ -369,6 +573,8 @@ class MainWindow(QMainWindow):
 		if event.key() == Qt.Key_Escape:
 			if self.editing_event:
 				self._revert_edit_event()
+			elif self.isFullScreen():
+				self.toggle_fullscreen()
 			else:
 				self.list_display.list_widget.setCurrentRow(-1)
 				self.setFocus()
@@ -522,6 +728,101 @@ class MainWindow(QMainWindow):
 		self.media_player.update_overlay()
 		if not keep_focus:
 			self.setFocus()
+
+	def _white_icon(self, sp_enum):
+		"""Return a white-tinted version of a standard icon for dark mode."""
+		px = self.style().standardIcon(sp_enum).pixmap(24, 24)
+		result = QPixmap(px.size())
+		result.fill(Qt.transparent)
+		p = QPainter(result)
+		p.drawPixmap(0, 0, px)
+		p.setCompositionMode(QPainter.CompositionMode_SourceIn)
+		p.fillRect(result.rect(), QColor("white"))
+		p.end()
+		return QIcon(result)
+
+	def _refresh_icon_buttons(self):
+		"""Sync icon button colors with the current theme."""
+		mp = self.media_player
+		ld = self.list_display
+		if self.dark_mode:
+			is_playing = mp.media_player.state() == QMediaPlayer.PlayingState
+			mp.play_button.setIcon(self._white_icon(QStyle.SP_MediaPause if is_playing else QStyle.SP_MediaPlay))
+			mp.volume_button.setIcon(self._white_icon(QStyle.SP_MediaVolume))
+			ld.prev_clip_button.setIcon(self._white_icon(QStyle.SP_MediaSeekBackward))
+			ld.next_clip_button.setIcon(self._white_icon(QStyle.SP_MediaSeekForward))
+			ld.loop_clip_button.setIcon(self._white_icon(QStyle.SP_BrowserReload))
+		else:
+			is_playing = mp.media_player.state() == QMediaPlayer.PlayingState
+			mp.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause if is_playing else QStyle.SP_MediaPlay))
+			mp.volume_button.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
+			ld.prev_clip_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekBackward))
+			ld.next_clip_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekForward))
+			ld.loop_clip_button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
+
+	def toggle_fullscreen(self):
+		if self.isFullScreen():
+			self.showNormal()
+			self.list_display.show()
+			self.media_player.fullscreen_button.setText("⛶")
+			self.media_player.fullscreen_button.setToolTip("Enter fullscreen")
+		else:
+			self.list_display.hide()
+			self.showFullScreen()
+			self.media_player.fullscreen_button.setText("⊡")
+			self.media_player.fullscreen_button.setToolTip("Exit fullscreen")
+
+	def _apply_theme(self, dark):
+		self.dark_mode = dark
+		QApplication.instance().setStyleSheet(DARK_STYLESHEET if dark else LIGHT_STYLESHEET)
+		self._refresh_icon_buttons()
+
+	def open_settings(self):
+		dialog = QDialog(self)
+		dialog.setWindowTitle("Settings")
+		dialog.setMinimumWidth(280)
+
+		outer = QVBoxLayout(dialog)
+		outer.setContentsMargins(16, 16, 16, 16)
+		outer.setSpacing(12)
+
+		# Section label
+		section = QLabel("Appearance", dialog)
+		font = section.font()
+		font.setBold(True)
+		section.setFont(font)
+		outer.addWidget(section)
+
+		# Divider
+		line = QFrame(dialog)
+		line.setFrameShape(QFrame.HLine)
+		line.setFrameShadow(QFrame.Sunken)
+		outer.addWidget(line)
+
+		# Radio buttons
+		self._rb_light = QRadioButton("Light", dialog)
+		self._rb_dark = QRadioButton("Dark", dialog)
+		group = QButtonGroup(dialog)
+		group.addButton(self._rb_light)
+		group.addButton(self._rb_dark)
+
+		(self._rb_dark if self.dark_mode else self._rb_light).setChecked(True)
+
+		outer.addWidget(self._rb_light)
+		outer.addWidget(self._rb_dark)
+		outer.addStretch(1)
+
+		# Save / Cancel
+		buttons = QDialogButtonBox(dialog)
+		save_btn = buttons.addButton("Save", QDialogButtonBox.AcceptRole)
+		buttons.addButton("Cancel", QDialogButtonBox.RejectRole)
+		save_btn.setDefault(True)
+		buttons.accepted.connect(dialog.accept)
+		buttons.rejected.connect(dialog.reject)
+		outer.addWidget(buttons)
+
+		if dialog.exec_() == QDialog.Accepted:
+			self._apply_theme(self._rb_dark.isChecked())
 
 	def closeEvent(self, event):
 		# Clean up media player before closing
