@@ -188,6 +188,13 @@ class MediaPlayer(QWidget):
 		self.help_button.setFocusPolicy(Qt.NoFocus)
 		self.help_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
+		self.fullscreen_button = QPushButton("⛶")
+		self.fullscreen_button.setFixedSize(28, 28)
+		self.fullscreen_button.setFlat(True)
+		self.fullscreen_button.setFocusPolicy(Qt.NoFocus)
+		self.fullscreen_button.setToolTip("Enter fullscreen")
+		self.fullscreen_button.clicked.connect(lambda: self.main_window.toggle_fullscreen())
+
 		self.pause_at_events_button = QPushButton("Pause At Tags")
 		self.pause_at_events_button.setCheckable(True)
 		self.pause_at_events_button.toggled.connect(self._set_pause_at_events)
@@ -226,6 +233,7 @@ class MediaPlayer(QWidget):
 		control_row.addWidget(volume_widget)
 		control_row.addWidget(self.help_button)
 		control_row.addStretch(1)
+		control_row.addWidget(self.fullscreen_button)
 
 		# create vbox layout
 		self.layout = QVBoxLayout()
@@ -276,6 +284,10 @@ class MediaPlayer(QWidget):
 			self.main_window.list_manager.create_list_from_json(self.path_label, self.main_window.half)
 			self.main_window.list_display.display_list()
 
+			pbp = getattr(self.main_window, "pbp_display", None)
+			if pbp:
+				pbp.load_pbp(filename)
+
 	def get_last_label_file(self):
 		path_label = self.path_label
 		folder_label = os.path.dirname(path_label)
@@ -315,14 +327,20 @@ class MediaPlayer(QWidget):
 		self.media_player.setVolume(value)
 
 	def mediastate_changed(self, state):
-		if self.media_player.state() == QMediaPlayer.PlayingState:
-			self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+		is_playing = self.media_player.state() == QMediaPlayer.PlayingState
+		sp = QStyle.SP_MediaPause if is_playing else QStyle.SP_MediaPlay
+		if getattr(self.main_window, 'dark_mode', False):
+			self.play_button.setIcon(self.main_window._white_icon(sp))
 		else:
-			self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+			self.play_button.setIcon(self.style().standardIcon(sp))
 
 	def position_changed(self, position):
 		self.slider.setValue(position)
 		frame_number = self.update_overlay()
+
+		pbp = getattr(self.main_window, "pbp_display", None)
+		if pbp:
+			pbp.update_frame(frame_number)
 
 		if self.pause_at_events:
 			if frame_number < self._last_position_frame:
@@ -492,8 +510,7 @@ class MediaPlayer(QWidget):
 
 		x = tl.x() + max(0, (video_width - self.pass_label_container.width()) // 2)
 
-		# RESTORE OLD Y: based on label height only (not its y position)
-		y = self.overlay_label.height() + 8
+		y = tl.y()
 
 		self.pass_label_container.move(x, y)
 

@@ -16,8 +16,8 @@ Post Up
 Pass
 Spot Up
 Screener Rolling to Rim
-Screener Popping to 3P Line
-Screener Ghosts to 3P Line
+Screener Popping
+Screener Ghosting
 Screener Slipping the Screen
 Isolation
 Cut
@@ -25,6 +25,7 @@ Blocked Shot
 Roller Defender Up on Screen
 Roller Defender Dropping
 Roller Defender Hedging
+Roller Defender at the Level
 Defensive Rebound
 Offensive Rebound
 2P Shot

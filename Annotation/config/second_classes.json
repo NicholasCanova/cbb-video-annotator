@@ -1,13 +1,13 @@
 {
 	"default": [],
 	"Drive": ["Left", "Right", "Straight"],
-	"Post Up": ["Left", "Right"],
+	"Post Up": ["Nothing","Left Shoulder, Right Hand", "Right Shoulder, Left Hand", "Left Shoulder, Left Hand", "Right Shoulder, Right Hand"],
 	"Isolation": ["Left", "Right", "Nothing"],
 	"2P Shot": ["Other", "Layup", "Dunk"],
 	"Off Ball Screen": ["Left", "Right"],
 	"Handoff": ["Left", "Right"],
 	"On Ball Screen": ["Left", "Right"],
-	"Cut": ["Cut", "Flash"],
-	"Pass Received": ["None", "Cutter Receives Pass"],
+	"Cut": ["Cut", "Flash", "Dunkers Spot Catch", "Rim Run"],
+	"Pass": ["None", "Pass to Cutter"],
 	"Defenders Switch": ["On-Ball", "Off-Ball"]
 }

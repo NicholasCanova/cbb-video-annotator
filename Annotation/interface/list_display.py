@@ -1,11 +1,21 @@
 from PyQt5.QtWidgets import (
-	QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QListWidget, QLineEdit,
+	QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLineEdit,
 	QCompleter, QApplication, QDialog, QLabel, QTextBrowser, QFrame,
-	QTableWidget, QTableWidgetItem, QHeaderView, QStyle, QSizePolicy
+	QTableWidget, QTableWidgetItem, QHeaderView, QStyle, QSizePolicy, QAbstractItemView
 )
 from PyQt5.QtCore import Qt, QStringListModel, QEvent, QTimer
 from PyQt5.QtMultimedia import QMediaPlayer
 from PyQt5.QtGui import QFont
+
+
+class EventTable(QTableWidget):
+	"""QTableWidget with a setCurrentRow helper that matches QListWidget's API."""
+	def setCurrentRow(self, row):
+		if row < 0:
+			self.clearSelection()
+			self.setCurrentItem(None)
+		else:
+			self.selectRow(row)
 
 
 class ListDisplay(QWidget):
@@ -13,7 +23,7 @@ class ListDisplay(QWidget):
 	def __init__(self, main_window):
 		super().__init__()
 
-		self.max_width = 300
+		self.max_width = 420
 		self.setMaximumWidth(self.max_width)
 
 		self.main_window = main_window
@@ -63,13 +73,39 @@ class ListDisplay(QWidget):
 		self.clear_filter_button = QPushButton("Clear")
 		self.clear_filter_button.clicked.connect(self._clear_filter)
 
+		self.settings_button = QPushButton("⚙")
+		self.settings_button.setFixedWidth(28)
+		self.settings_button.setFlat(True)
+		self.settings_button.setFocusPolicy(Qt.NoFocus)
+		self.settings_button.setToolTip("Settings")
+		self.settings_button.setStyleSheet("font-size: 20pt; padding: 0;")
+		self.settings_button.clicked.connect(self.main_window.open_settings)
+
 		self._filter_layout.addWidget(self.search_input)
 		self._filter_layout.addWidget(self.clear_filter_button)
+		self._filter_layout.addWidget(self.settings_button)
 		self.layout.addLayout(self._filter_layout)
 
-		# Event list
-		self.list_widget = QListWidget()
-		self.list_widget.setSelectionMode(QListWidget.SingleSelection)
+		# Event table
+		self.list_widget = EventTable(0, 4)
+		self.list_widget.setHorizontalHeaderLabels(["#", "Frame", "Action", "Subtype"])
+		self.list_widget.verticalHeader().setVisible(False)
+		self.list_widget.setSelectionBehavior(QAbstractItemView.SelectRows)
+		self.list_widget.setSelectionMode(QAbstractItemView.SingleSelection)
+		self.list_widget.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		self.list_widget.setShowGrid(False)
+		self.list_widget.setFocusPolicy(Qt.NoFocus)
+		self.list_widget.setAlternatingRowColors(True)
+		self.list_widget.verticalHeader().setDefaultSectionSize(24)
+
+		h = self.list_widget.horizontalHeader()
+		h.setSectionResizeMode(0, QHeaderView.Fixed)
+		h.setSectionResizeMode(1, QHeaderView.Fixed)
+		h.setSectionResizeMode(2, QHeaderView.Stretch)
+		h.setSectionResizeMode(3, QHeaderView.Fixed)
+		self.list_widget.setColumnWidth(0, 32)
+		self.list_widget.setColumnWidth(1, 58)
+		self.list_widget.setColumnWidth(3, 100)
 
 		self.list_widget.clicked.connect(self._on_event_clicked)
 		self.layout.addWidget(self.list_widget)
@@ -136,7 +172,7 @@ class ListDisplay(QWidget):
 				self._activate_row(row)
 
 	def _on_event_double_clicked(self, item):
-		row = self.list_widget.row(item)
+		row = item.row()
 		if row < 0:
 			return
 
@@ -169,9 +205,29 @@ class ListDisplay(QWidget):
 			)
 		self._visible_events = self._filter_events(events)
 
-		self.list_widget.clear()
+		self.list_widget.setRowCount(0)
 		for idx, event in enumerate(self._visible_events):
-			self.list_widget.insertItem(idx, event.to_text())
+			self.list_widget.insertRow(idx)
+
+			num_item = QTableWidgetItem(str(idx + 1))
+			num_item.setTextAlignment(Qt.AlignCenter)
+			num_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+
+			frame_item = QTableWidgetItem(str(event.frame))
+			frame_item.setTextAlignment(Qt.AlignCenter)
+			frame_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+
+			action_item = QTableWidgetItem(event.label or "")
+			action_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+
+			subtype = event.subType if event.subType and event.subType != "None" else ""
+			subtype_item = QTableWidgetItem(subtype)
+			subtype_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+
+			self.list_widget.setItem(idx, 0, num_item)
+			self.list_widget.setItem(idx, 1, frame_item)
+			self.list_widget.setItem(idx, 2, action_item)
+			self.list_widget.setItem(idx, 3, subtype_item)
 
 		self.main_window.media_player.refresh_event_pause_queue(events=list(self._visible_events))
 
@@ -464,8 +520,8 @@ class ListDisplay(QWidget):
 			("Shift + P + S", "Pass"),
 			# ("Shift + S + U", "Spot Up"),
 			("Shift + S + R", "Screener Rolling to Rim"),
-			("Shift + S + P", "Screener Popping to 3P Line"),
-			("Shift + S + G", "Screener Ghosts to 3P Line"),
+			("Shift + S + P", "Screener Popping"),
+			("Shift + S + G", "Screener Ghosting"),
 			("Shift + S + S", "Screener Slipping the Screen"),
 			("Shift + I + S", "Isolation"),
 			("Shift + C + T", "Cut"),
@@ -473,6 +529,7 @@ class ListDisplay(QWidget):
 			("Shift + R + U", "Roller Defender Up on Screen"),
 			("Shift + R + D", "Roller Defender Dropping"),
 			("Shift + R + H", "Roller Defender Hedging"),
+			("Shift + R + L", "Roller Defender at the Level"),
 			("Shift + O + R", "Offensive Rebound"),
 			("Shift + D + R", "Defensive Rebound"),
 			("Shift + 2 + P (@ + P)", "2P Shot"),
@@ -960,6 +1017,7 @@ class ListDisplay(QWidget):
 				border-radius: 10px;
 				color: #e6e9f2;
 			}
+			#hotkeyTable::item:hover { background: transparent; }
 
 			QPushButton {
 				padding: 6px 12px;
