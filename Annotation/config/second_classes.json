@@ -9,5 +9,6 @@
 	"On Ball Screen": ["Left", "Right"],
 	"Cut": ["Cut", "Flash", "Dunkers Spot Catch", "Rim Run"],
 	"Pass": ["None", "Pass to Cutter"],
+	"Inbound Pass": ["None", "Pass to Cutter"],
 	"Defenders Switch": ["On-Ball", "Off-Ball"]
 }
