@@ -39,11 +39,14 @@ class EventSelectionWindow(QMainWindow):
 		# Allow the code to be run from any working directory
 		base = Path(__file__).resolve().parent
 
-		# Read the available labels for action types and subtypes
-		self.labels = self._read_labels(base / "../config/classes.txt")
-		self.label_map = self._read_label_map(base / "../config/second_classes.json")
-		self.third_label_map = self._read_label_map(base / "../config/third_classes.json")
-		self.fourth_labels = self._read_labels(base / "../config/fourth_classes.txt")
+		# Read all config from single classes.json
+		with (base / "../config/classes.json").open() as fh:
+			cfg = json.load(fh)
+
+		self.labels = cfg.get("labels", [])
+		self.label_map = self._process_label_map(cfg.get("subtypes", {}))
+		self.third_label_map = self._process_label_map(cfg.get("third", {}))
+		self.fourth_labels = cfg.get("visibility", [])
 
 		# Setup the list widgets
 		self.list_widget = QListWidget()
@@ -92,20 +95,7 @@ class EventSelectionWindow(QMainWindow):
 		self._set_column_visibility(show_second=True, show_third=False, show_fourth=True)
 
 
-	def _read_labels(self, path: Path):
-		if not path.exists():
-			return []
-		return [l.strip() for l in path.read_text().splitlines() if l.strip()]
-
-	def _read_label_map(self, path: Path):
-		if not path.exists():
-			return {}
-		try:
-			with path.open() as fh:
-				data = json.load(fh)
-		except (json.JSONDecodeError, IOError):
-			return {}
-
+	def _process_label_map(self, data: dict):
 		mapping = {}
 		for key, value in data.items():
 			if not key or not isinstance(value, list):
@@ -113,7 +103,6 @@ class EventSelectionWindow(QMainWindow):
 			items = [str(item).strip() for item in value if str(item).strip()]
 			if items:
 				mapping[str(key).strip()] = items
-
 		return mapping
 
 	def _labels_for(self, first_label, label_map):
