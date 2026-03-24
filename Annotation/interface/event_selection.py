@@ -398,6 +398,14 @@ class EventSelectionWindow(QMainWindow):
 		if not self.preselect_first_label(event.label):
 			return False
 
+		if event.note:
+			self.note_input.setText(event.note)
+
+		# If no subtypes for this label, preselect_first_label already moved to FOURTH
+		if self.step == Step.FOURTH:
+			self._match_and_select(self.list_widget_fourth, event.visibility)
+			return True
+
 		second_match = self._match_and_select(self.list_widget_second, event.subType)
 		if not second_match:
 			self.step = Step.SECOND
@@ -406,8 +414,6 @@ class EventSelectionWindow(QMainWindow):
 		self.second_label = second_match
 
 		has_third = self._populate_third_list(self.first_label)
-		if event.note:
-			self.note_input.setText(event.note)
 
 		if not has_third:
 			self.step = Step.FOURTH
