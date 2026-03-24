@@ -16,7 +16,7 @@ fi
 
 mkdir -p "${VIDEOS_MOUNT}"
 
-if mount | rg -q "on ${VIDEOS_MOUNT} "; then
+if mount | grep -q "on ${VIDEOS_MOUNT} "; then
   echo "${VIDEOS_MOUNT} is already mounted."
   exit 0
 fi
