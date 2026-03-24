@@ -120,11 +120,11 @@ class MediaPlayer(QWidget):
 		self.open_file_button.setFocusPolicy(Qt.NoFocus)
 		self.open_file_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
-		self.export_button = QPushButton('Export Annotated Video')
-		self.export_button.clicked.connect(lambda: start_export(self))
-		self.export_button.setFocusPolicy(Qt.NoFocus)
-		self.export_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
-		self.export_button.setEnabled(False)
+		self.save_events_button = QPushButton('Save Events')
+		self.save_events_button.clicked.connect(self.show_save_events_dialog)
+		self.save_events_button.setFocusPolicy(Qt.NoFocus)
+		self.save_events_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.save_events_button.setEnabled(False)
 
 		# Button for playing the video
 		self.play_button = QPushButton()
@@ -207,10 +207,6 @@ class MediaPlayer(QWidget):
 		self.volume_slider.setFixedWidth(110)
 		self.volume_slider.setFocusPolicy(Qt.NoFocus)
 
-		self.save_gcs_button = QPushButton("Save to GCS")
-		self.save_gcs_button.clicked.connect(self.save_to_gcs)
-		self.save_gcs_button.setFocusPolicy(Qt.NoFocus)
-		self.save_gcs_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
 		self.help_button = QPushButton("Help")
 		self.help_button.clicked.connect(self._show_help_dialog)
@@ -245,7 +241,7 @@ class MediaPlayer(QWidget):
 		control_row.setContentsMargins(0, 0, 0, 0)
 		control_row.setSpacing(12)
 		control_row.addWidget(self.open_file_button)
-		control_row.addWidget(self.export_button)
+		control_row.addWidget(self.save_events_button)
 		control_row.addWidget(self.play_button)
 		control_row.addWidget(self.speed_half_button)
 		control_row.addWidget(self.speed_normal_button)
@@ -264,7 +260,6 @@ class MediaPlayer(QWidget):
 		volume_layout.addWidget(self.volume_slider)
 		control_row.addWidget(volume_widget)
 		control_row.addWidget(self.help_button)
-		control_row.addWidget(self.save_gcs_button)
 		control_row.addStretch(1)
 		control_row.addWidget(self.fullscreen_button)
 
@@ -310,7 +305,7 @@ class MediaPlayer(QWidget):
 			self._current_video_path = filename
 			self.media_player.setMedia(QMediaContent(QUrl.fromLocalFile(filename)))
 			self.play_button.setEnabled(True)
-			self.export_button.setEnabled(True)
+			self.save_events_button.setEnabled(True)
 
 			fps = self._read_video_frame_rate(filename)
 			if fps:
@@ -340,6 +335,12 @@ class MediaPlayer(QWidget):
 			if os.path.isfile(gcs_path):
 				import shutil
 				shutil.copy2(gcs_path, self.path_label)
+			else:
+				# Fall back to Labels-v2.json in the video directory
+				labels_v2_path = self.video_source_dir + "/Labels-v2.json"
+				if os.path.isfile(labels_v2_path):
+					import shutil
+					shutil.copy2(labels_v2_path, self.path_label)
 
 			self.main_window.list_manager.create_list_from_json(self.path_label, self.main_window.half)
 			self.main_window.list_display.display_list()
@@ -350,6 +351,22 @@ class MediaPlayer(QWidget):
 
 	def get_last_label_file(self):
 		return self.path_label
+
+	def show_save_events_dialog(self):
+		from PyQt5.QtWidgets import QDialog, QVBoxLayout, QPushButton
+		dialog = QDialog(self)
+		dialog.setWindowTitle("Save Events")
+		layout = QVBoxLayout(dialog)
+
+		export_btn = QPushButton("Export Annotated Video")
+		export_btn.clicked.connect(lambda: (dialog.accept(), start_export(self)))
+		layout.addWidget(export_btn)
+
+		gcs_btn = QPushButton("Save Annotations to GCS")
+		gcs_btn.clicked.connect(lambda: (dialog.accept(), self.save_to_gcs()))
+		layout.addWidget(gcs_btn)
+
+		dialog.exec_()
 
 	def save_to_gcs(self):
 		if not hasattr(self, 'video_source_dir') or not hasattr(self, 'gcs_filename'):
