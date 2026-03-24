@@ -207,11 +207,18 @@ class MediaPlayer(QWidget):
 		self.pause_at_events_button.toggled.connect(self._set_pause_at_events)
 		self.pause_at_events_button.setFocusPolicy(Qt.NoFocus)
 		self.pause_at_events_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.pause_at_events_button.setStyleSheet(
+			"QPushButton { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: none; }"
+		)
 
-		self.pause_actions_button = QPushButton("Choose Pause Actions")
-		self.pause_actions_button.clicked.connect(self._open_pause_action_selector)
-		self.pause_actions_button.setFocusPolicy(Qt.NoFocus)
-		self.pause_actions_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.pause_actions_arrow_button = QPushButton("▾")
+		self.pause_actions_arrow_button.clicked.connect(self._open_pause_action_selector)
+		self.pause_actions_arrow_button.setFocusPolicy(Qt.NoFocus)
+		self.pause_actions_arrow_button.setFixedWidth(20)
+		self.pause_actions_arrow_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+		self.pause_actions_arrow_button.setStyleSheet(
+			"QPushButton { border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 0px 2px; }"
+		)
 
 		self.filter_events_button = QPushButton("Filter Displayed Events")
 		self.filter_events_button.clicked.connect(self._open_event_display_filter)
@@ -231,8 +238,13 @@ class MediaPlayer(QWidget):
 		control_row.addWidget(self.rewind_10_button)
 		control_row.addWidget(self.rewind_20_button)
 		control_row.addWidget(self.rewind_30_button)
-		control_row.addWidget(self.pause_at_events_button)
-		control_row.addWidget(self.pause_actions_button)
+		pause_split = QWidget()
+		pause_split_layout = QHBoxLayout(pause_split)
+		pause_split_layout.setContentsMargins(0, 0, 0, 0)
+		pause_split_layout.setSpacing(0)
+		pause_split_layout.addWidget(self.pause_at_events_button)
+		pause_split_layout.addWidget(self.pause_actions_arrow_button)
+		control_row.addWidget(pause_split)
 		control_row.addWidget(self.filter_events_button)
 		volume_widget = QWidget()
 		volume_layout = QHBoxLayout(volume_widget)
