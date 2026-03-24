@@ -87,8 +87,8 @@ class ListDisplay(QWidget):
 		self.layout.addLayout(self._filter_layout)
 
 		# Event table
-		self.list_widget = EventTable(0, 4)
-		self.list_widget.setHorizontalHeaderLabels(["#", "Frame", "Action", "Subtype"])
+		self.list_widget = EventTable(0, 2)
+		self.list_widget.setHorizontalHeaderLabels(["Frame #", "Action"])
 		self.list_widget.verticalHeader().setVisible(False)
 		self.list_widget.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.list_widget.setSelectionMode(QAbstractItemView.SingleSelection)
@@ -100,12 +100,8 @@ class ListDisplay(QWidget):
 
 		h = self.list_widget.horizontalHeader()
 		h.setSectionResizeMode(0, QHeaderView.Fixed)
-		h.setSectionResizeMode(1, QHeaderView.Fixed)
-		h.setSectionResizeMode(2, QHeaderView.Stretch)
-		h.setSectionResizeMode(3, QHeaderView.Fixed)
-		self.list_widget.setColumnWidth(0, 32)
-		self.list_widget.setColumnWidth(1, 58)
-		self.list_widget.setColumnWidth(3, 100)
+		h.setSectionResizeMode(1, QHeaderView.Stretch)
+		self.list_widget.setColumnWidth(0, 58)
 
 		self.list_widget.clicked.connect(self._on_event_clicked)
 		self.layout.addWidget(self.list_widget)
@@ -209,25 +205,18 @@ class ListDisplay(QWidget):
 		for idx, event in enumerate(self._visible_events):
 			self.list_widget.insertRow(idx)
 
-			num_item = QTableWidgetItem(str(idx + 1))
-			num_item.setTextAlignment(Qt.AlignCenter)
-			num_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-
 			frame_item = QTableWidgetItem(str(event.frame))
 			frame_item.setTextAlignment(Qt.AlignCenter)
 			frame_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
 
-			action_item = QTableWidgetItem(event.label or "")
+			subtype = event.subType if event.subType and event.subType != "None" else ""
+			label = event.label or ""
+			action_text = f"{label} ({subtype})" if subtype else label
+			action_item = QTableWidgetItem(action_text)
 			action_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
 
-			subtype = event.subType if event.subType and event.subType != "None" else ""
-			subtype_item = QTableWidgetItem(subtype)
-			subtype_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
-
-			self.list_widget.setItem(idx, 0, num_item)
-			self.list_widget.setItem(idx, 1, frame_item)
-			self.list_widget.setItem(idx, 2, action_item)
-			self.list_widget.setItem(idx, 3, subtype_item)
+			self.list_widget.setItem(idx, 0, frame_item)
+			self.list_widget.setItem(idx, 1, action_item)
 
 		self.main_window.media_player.refresh_event_pause_queue(events=list(self._visible_events))
 
@@ -503,51 +492,57 @@ class ListDisplay(QWidget):
 
 	def _all_hotkey_rows(self):
 		return [
-			("Shift + C + F", "Common Foul"),
 			("Shift + D + R", "Drive"),
-			("Shift + D + H", "Handoff"),
-			("Shift + D + T", "Defenders Double Team"),
-			("Shift + D + S", "Defenders Switch"),
-			("Shift + D + F", "Deflection"),
 			("Shift + O + B", "On Ball Screen"),
-			("Shift + O + S", "Off Ball Screen"),
-			("Shift + O + F", "Offensive Foul"),
-			("Shift + O + S", "Ballhandler Defender Over Screen"),
-			("Shift + U + S", "Ballhandler Defender Under Screen"),
+			("Shift + H + O", "Handoff"),
 			("Shift + F + H", "Fake Handoff"),
-			("Shift + F + T", "Free Throw"),
+			("Shift + O + S", "Off Ball Screen"),
 			("Shift + P + U", "Post Up"),
-			("Shift + P + S", "Pass"),
-			# ("Shift + S + U", "Spot Up"),
+			("Shift + I + S", "Isolation"),
+			("Shift + C + T", "Cut"),
+			("Shift + T + S", "Transition"),
+
 			("Shift + S + R", "Screener Rolling to Rim"),
 			("Shift + S + P", "Screener Popping"),
 			("Shift + S + G", "Screener Ghosting"),
 			("Shift + S + S", "Screener Slipping the Screen"),
-			("Shift + I + S", "Isolation"),
-			("Shift + C + T", "Cut"),
-			("Shift + B + S", "Blocked Shot"),
-			("Shift + R + U", "Roller Defender Up on Screen"),
-			("Shift + R + D", "Roller Defender Dropping"),
-			("Shift + R + H", "Roller Defender Hedging"),
-			("Shift + R + L", "Roller Defender at the Level"),
-			("Shift + O + R", "Offensive Rebound"),
-			("Shift + D + R", "Defensive Rebound"),
-			("Shift + 2 + P (@ + P)", "2P Shot"),
-			("Shift + 3 + P (# + P)", "3P Shot"),
+			("Shift + S + R", "Ballhandler Rejects the Screen"),
+
+			("Shift + D + T", "Defenders Double Team"),
+			("Shift + D + S", "Defenders Switch"),
+			("Shift + O + S", "Ballhandler Defender Over Screen"),
+			("Shift + U + S", "Ballhandler Defender Under Screen"),
+			("Shift + S + D", "Screener Defender Dropping"),
+			("Shift + S + H", "Screen Defender Hedging"),
+			("Shift + S + L", "Screen Defender at the Level"),
+
+			("Shift + 3 + P (# + P)", "3PT Attempt"),
+			("Shift + 2 + P (@ + P)", "2PT Attempt"),
+			("Shift + F + T", "FT Attempt"),
 			("Shift + M + S", "Made Shot"),
 			("Shift + X + S", "Missed Shot"),
-			("Shift + T + S", "Transition"),
-			("Shift + I + P", "Inbound Pass"),
+			("Shift + B + S", "Blocked Shot"),
+			("Shift + O + R", "Offensive Rebound"),
+			("Shift + D + R", "Defensive Rebound"),
+
 			("Shift + S + F", "Shooting Foul"),
-			("Shift + S + T", "Steal"),
+			("Shift + C + F", "Non-shooting Foul"),
+			
+			("Shift + P + S", "Pass Attempt"),
 			("Shift + S + P", "Pass Received"),
+			("Shift + I + P", "Inbound Pass"),
+			("Shift + D + F", "Deflection"),
 			("Shift + O + O", "Out of Bounds"),
+			("Shift + S + T", "Steal"),
+			("Shift + D + G", "Defensive Goaltending"),
+			
+			("Shift + O + F", "Offensive Foul"),
 			("Shift + V + 3 (V + #)", "3 Second Violation"),
 			("Shift + V + 5 (V + %)", "5 Second Violation"),
 			("Shift + V + 0 (V + )", "10 Second Violation"),
 			("Shift + V + S", "Shot Clock Violation"),
 			("Shift + V + T", "Travel Violation"),
-			("Shift + V + O", "Offensive Goaltending Violation"),
+			("Shift + V + O", "Offensive Goaltending"),
 			("Shift + V + L", "Free Throw Lane Violation"),
 		]
 

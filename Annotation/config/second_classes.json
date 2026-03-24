@@ -3,12 +3,12 @@
 	"Drive": ["Left", "Right", "Straight"],
 	"Post Up": ["Nothing","Left Shoulder, Right Hand", "Right Shoulder, Left Hand", "Left Shoulder, Left Hand", "Right Shoulder, Right Hand"],
 	"Isolation": ["Left", "Right", "Nothing"],
-	"2P Shot": ["Other", "Layup", "Dunk"],
-	"Off Ball Screen": ["Left", "Right"],
+	"2PT Attempt": ["Other", "Layup", "Dunk"],
 	"Handoff": ["Left", "Right"],
 	"On Ball Screen": ["Left", "Right"],
 	"Cut": ["Cut", "Flash", "Dunkers Spot Catch", "Rim Run"],
-	"Pass": ["None", "Pass to Cutter"],
+	"Pass Attempt": ["None", "Pass to Cutter"],
 	"Inbound Pass": ["None", "Pass to Cutter"],
-	"Defenders Switch": ["On-Ball", "Off-Ball"]
+	"Defenders Switch": ["On-Ball", "Off-Ball"],
+	"Screener Ghosting": ["Left", "Right"]
 }

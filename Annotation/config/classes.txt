@@ -1,47 +1,52 @@
-Common Foul
 Drive
-Handoff
-Defenders Double Team
-Defenders Switch
-Deflection
 On Ball Screen
-Off Ball Screen
-Offensive Foul
-Ballhandler Rejects Screen
-Ballhandler Defender Over Screen
-Ballhandler Defender Under Screen
+Handoff
 Fake Handoff
-Free Throw
+Off Ball Screen
 Post Up
-Pass
-Spot Up
+Isolation
+Cut
+Transition
+
 Screener Rolling to Rim
 Screener Popping
 Screener Ghosting
 Screener Slipping the Screen
-Isolation
-Cut
-Blocked Shot
-Roller Defender Up on Screen
-Roller Defender Dropping
-Roller Defender Hedging
-Roller Defender at the Level
-Defensive Rebound
-Offensive Rebound
-2P Shot
-3P Shot
+Ballhandler Rejects the Screen
+
+Defenders Double Team
+Defenders Switch
+Ballhandler Defender Over Screen
+Ballhandler Defender Under Screen
+Screener Defender Dropping
+Screener Defender at the Level
+Screener Defender Hedging
+
+3PT Attempt
+2PT Attempt
+FT Attempt
 Made Shot
 Missed Shot
-Transition
-Inbound Pass
+Blocked Shot
+Offensive Rebound
+Defensive Rebound
+
 Shooting Foul
-Steal
+Non-shooting Foul
+
+Pass Attempt
 Pass Received
+Inbound Pass
+Deflection
 Out of Bounds
+Steal
+Defensive Goaltending
+
+Offensive Foul
 3 Second Violation
 5 Second Violation
 10 Second Violation
 Shot Clock Violation
 Travel Violation
-Offensive Goaltending Violation
+Offensive Goaltending 
 Free Throw Lane Violation

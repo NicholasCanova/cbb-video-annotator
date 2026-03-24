@@ -3,6 +3,7 @@ import os
 from bisect import bisect_left
 
 import cv2
+from interface.video_exporter import start_export
 from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel, QGraphicsView, QGraphicsScene, QMessageBox, QDialog, QListWidget, QListWidgetItem, QDialogButtonBox, QSizePolicy, QButtonGroup
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaMetaData
 from PyQt5.QtMultimediaWidgets import QGraphicsVideoItem
@@ -112,10 +113,18 @@ class MediaPlayer(QWidget):
 		self.video_container.installEventFilter(self)
 
 		# Button to open a new file
+		self._current_video_path = None
+
 		self.open_file_button = QPushButton('Open video')
 		self.open_file_button.clicked.connect(self.open_file)
 		self.open_file_button.setFocusPolicy(Qt.NoFocus)
 		self.open_file_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+
+		self.export_button = QPushButton('Export Annotated Video')
+		self.export_button.clicked.connect(lambda: start_export(self))
+		self.export_button.setFocusPolicy(Qt.NoFocus)
+		self.export_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.export_button.setEnabled(False)
 
 		# Button for playing the video
 		self.play_button = QPushButton()
@@ -236,6 +245,7 @@ class MediaPlayer(QWidget):
 		control_row.setContentsMargins(0, 0, 0, 0)
 		control_row.setSpacing(12)
 		control_row.addWidget(self.open_file_button)
+		control_row.addWidget(self.export_button)
 		control_row.addWidget(self.play_button)
 		control_row.addWidget(self.speed_half_button)
 		control_row.addWidget(self.speed_normal_button)
@@ -297,8 +307,10 @@ class MediaPlayer(QWidget):
 		filename, _ = QFileDialog.getOpenFileName(self, "Open Video", default_dir)
 
 		if filename != '':
+			self._current_video_path = filename
 			self.media_player.setMedia(QMediaContent(QUrl.fromLocalFile(filename)))
 			self.play_button.setEnabled(True)
+			self.export_button.setEnabled(True)
 
 			fps = self._read_video_frame_rate(filename)
 			if fps:
