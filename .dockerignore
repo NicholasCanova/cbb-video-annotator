@@ -1,0 +1,12 @@
+venv/
+.git/
+.gitignore
+.python-version
+__pycache__/
+*.pyc
+Annotation/example_video/
+cloud-run-deploy/DEPLOY.md
+cloud-run-deploy/build-and-deploy.txt
+cloud-run-deploy/grant-sa-permission.sh
+cloud-run-deploy/cloud-run.yaml
+README.md

@@ -1,0 +1,43 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: cbb-video-annotator
+  annotations:
+    run.googleapis.com/launch-stage: BETA
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "5"
+        # gen2 required for GCS volume mounts
+        run.googleapis.com/execution-environment: gen2
+    spec:
+      # One tagger per container instance
+      containerConcurrency: 1
+      # Max session length (Cloud Run max is 3600s / 60 min)
+      # Taggers will need to reconnect after this — noVNC auto-reconnects
+      timeoutSeconds: 3600
+      serviceAccountName: cbb-compute@cbbanalytics.iam.gserviceaccount.com
+      containers:
+        - image: gcr.io/cbbanalytics/cbb-images/video-annotator
+          ports:
+            - containerPort: 8080
+          env:
+            # Optional: set a VNC password (taggers will be prompted in browser)
+            # - name: VNC_PASSWORD
+            #   value: "changeme"
+          resources:
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          volumeMounts:
+            - name: videos
+              mountPath: /videos
+      volumes:
+        - name: videos
+          csi:
+            driver: gcsfuse.run.googleapis.com
+            readOnly: false
+            volumeAttributes:
+              bucketName: cbb-tracking
