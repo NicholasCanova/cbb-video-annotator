@@ -111,6 +111,8 @@ class ListManager:
 			data = json.load(file)["annotations"]
 
 			for event in data:
+				if "label" not in event or "gameTime" not in event:
+					continue
 				tmp_half = int(event["gameTime"][0])
 				if tmp_half == half:
 					tmp_time = event["gameTime"][4:]
@@ -136,7 +138,9 @@ class ListManager:
 							tmp_frame = None
 					if tmp_frame is None:
 						tmp_frame = int(tmp_position // 40) if tmp_position >= 0 else 0
-					event_list.append(Event(tmp_label, tmp_half, tmp_time, tmp_subType, tmp_position, tmp_visibility, tmp_frame))
+					tmp_note_raw = event.get("note", None)
+					tmp_note = None if (tmp_note_raw is None or str(tmp_note_raw) == "None") else str(tmp_note_raw)
+					event_list.append(Event(tmp_label, tmp_half, tmp_time, tmp_subType, tmp_position, tmp_visibility, tmp_frame, note=tmp_note))
 		return event_list
 
 	def save_file(self, path, half):
@@ -160,6 +164,7 @@ class ListManager:
 			tmp_dict["visibility"] = str(event.visibility)
 			tmp_dict["position"] = str(event.position)
 			tmp_dict["frame"] = str(event.frame)
+			tmp_dict["note"] = str(event.note) if getattr(event, "note", None) else "None"
 			annotations_dictionary.append(tmp_dict)
 
 		if os.path.isfile(path):

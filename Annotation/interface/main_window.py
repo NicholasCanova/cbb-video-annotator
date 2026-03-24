@@ -888,6 +888,6 @@ class MainWindow(QMainWindow):
 			self._apply_theme(self._rb_dark.isChecked())
 
 	def closeEvent(self, event):
-		# Clean up media player before closing
+		self.media_player.save_on_exit()
 		self.media_player.cleanup()
 		event.accept()

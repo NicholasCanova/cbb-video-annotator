@@ -2,7 +2,7 @@ from enum import IntEnum
 from pathlib import Path
 import json
 
-from PyQt5.QtWidgets import QMainWindow, QWidget, QListWidget, QHBoxLayout
+from PyQt5.QtWidgets import QMainWindow, QWidget, QListWidget, QHBoxLayout, QVBoxLayout, QLabel, QLineEdit
 from PyQt5.QtGui import QPalette
 from PyQt5.QtCore import Qt
 
@@ -66,11 +66,19 @@ class EventSelectionWindow(QMainWindow):
 		central_display = QWidget(self)
 		self.setCentralWidget(central_display)
 
-		final_layout = QHBoxLayout()
-		final_layout.addWidget(self.list_widget)
-		final_layout.addWidget(self.list_widget_second)
-		final_layout.addWidget(self.list_widget_third)
-		final_layout.addWidget(self.list_widget_fourth)
+		lists_layout = QHBoxLayout()
+		lists_layout.addWidget(self.list_widget)
+		lists_layout.addWidget(self.list_widget_second)
+		lists_layout.addWidget(self.list_widget_third)
+		lists_layout.addWidget(self.list_widget_fourth)
+
+		self.note_input = QLineEdit()
+		self.note_input.setPlaceholderText("Note (optional)")
+		self.note_input.setFocusPolicy(Qt.ClickFocus)
+
+		final_layout = QVBoxLayout()
+		final_layout.addLayout(lists_layout)
+		final_layout.addWidget(self.note_input)
 		central_display.setLayout(final_layout)
 
 		self.step = Step.FIRST
@@ -243,15 +251,16 @@ class EventSelectionWindow(QMainWindow):
 			if self.main_window.editing_event and self.main_window.edit_event_obj:
 				self.main_window.list_manager.delete_event(self.main_window.edit_event_obj)
 
+			note_text = self.note_input.text().strip() or None
 			self.main_window.list_manager.add_event(Event(
 				self.first_label,
 				self.main_window.half,
 				ms_to_time(position),
 				self.second_label,
 				position,
-				self.third_label,
-				self.main_window.position_to_frame(position),
 				fourth_label,
+				self.main_window.position_to_frame(position),
+				note=note_text,
 			))
 
 			self.main_window.list_display.display_list()
@@ -363,6 +372,7 @@ class EventSelectionWindow(QMainWindow):
 		self.list_widget_second.clearFocus()
 		self.list_widget_third.clearFocus()
 		self.list_widget_fourth.clearFocus()
+		self.note_input.clear()
 
 		self.hide()
 		self.main_window.setFocus()
@@ -406,9 +416,13 @@ class EventSelectionWindow(QMainWindow):
 		self.second_label = second_match
 
 		has_third = self._populate_third_list(self.first_label)
+		if event.note:
+			self.note_input.setText(event.note)
+
 		if not has_third:
 			self.step = Step.FOURTH
 			self._enter_step(self.list_widget_fourth)
+			self._match_and_select(self.list_widget_fourth, event.visibility)
 			return True
 
 		self.step = Step.THIRD

@@ -343,6 +343,8 @@ class MediaPlayer(QWidget):
 
 			# Use a local temp file for session saves (fast)
 			self.path_label = f"/tmp/{self.gcs_filename}"
+			if os.path.isfile(self.path_label):
+				os.remove(self.path_label)
 
 			# Load existing annotations from GCS if they exist
 			gcs_annotations_dir = self.video_source_dir + "/annotations"
@@ -350,12 +352,16 @@ class MediaPlayer(QWidget):
 			if os.path.isfile(gcs_path):
 				import shutil
 				shutil.copy2(gcs_path, self.path_label)
+				self.annotations_save_path = gcs_path
 			else:
 				# Fall back to Labels-v2.json in the video directory
 				labels_v2_path = self.video_source_dir + "/Labels-v2.json"
 				if os.path.isfile(labels_v2_path):
 					import shutil
 					shutil.copy2(labels_v2_path, self.path_label)
+					self.annotations_save_path = labels_v2_path
+				else:
+					self.annotations_save_path = gcs_path
 
 			self.main_window.list_manager.create_list_from_json(self.path_label, self.main_window.half)
 			self.main_window.list_display.display_list()
@@ -890,6 +896,19 @@ class MediaPlayer(QWidget):
 			self._position_pass_label()
 
 		return super().eventFilter(obj, event)
+
+	def save_on_exit(self):
+		if not hasattr(self, 'path_label') or not self.path_label:
+			return
+		if not hasattr(self, 'annotations_save_path') or not self.annotations_save_path:
+			return
+		try:
+			self.main_window.list_manager.save_file(self.path_label, self.main_window.half)
+			import shutil
+			os.makedirs(os.path.dirname(self.annotations_save_path), exist_ok=True)
+			shutil.copy2(self.path_label, self.annotations_save_path)
+		except Exception:
+			pass
 
 	def cleanup(self):
 		# clean up media player resources to prevent segfaults
