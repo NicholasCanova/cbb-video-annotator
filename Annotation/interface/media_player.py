@@ -106,6 +106,7 @@ class MediaPlayer(QWidget):
 		self.pause_at_event_frames = []
 		self._pause_action_filter = None
 		self._pass_event_display_filter = None
+		self.display_events = False
 		self._next_pause_index = 0
 		self._last_position_frame = 0
 		self._pause_event_source = None
@@ -220,10 +221,24 @@ class MediaPlayer(QWidget):
 			"QPushButton { border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 0px 2px; }"
 		)
 
-		self.filter_events_button = QPushButton("Filter Displayed Events")
-		self.filter_events_button.clicked.connect(self._open_event_display_filter)
-		self.filter_events_button.setFocusPolicy(Qt.NoFocus)
-		self.filter_events_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.display_events_button = QPushButton("Display Events")
+		self.display_events_button.setCheckable(True)
+		self.display_events_button.setChecked(False)
+		self.display_events_button.toggled.connect(self._set_display_events)
+		self.display_events_button.setFocusPolicy(Qt.NoFocus)
+		self.display_events_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.display_events_button.setStyleSheet(
+			"QPushButton { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: none; }"
+		)
+
+		self.display_events_arrow_button = QPushButton("▾")
+		self.display_events_arrow_button.clicked.connect(self._open_event_display_filter)
+		self.display_events_arrow_button.setFocusPolicy(Qt.NoFocus)
+		self.display_events_arrow_button.setFixedWidth(20)
+		self.display_events_arrow_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+		self.display_events_arrow_button.setStyleSheet(
+			"QPushButton { border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 0px 2px; }"
+		)
 
 		# create hbox layout for controls
 		control_row = QHBoxLayout()
@@ -245,7 +260,13 @@ class MediaPlayer(QWidget):
 		pause_split_layout.addWidget(self.pause_at_events_button)
 		pause_split_layout.addWidget(self.pause_actions_arrow_button)
 		control_row.addWidget(pause_split)
-		control_row.addWidget(self.filter_events_button)
+		display_split = QWidget()
+		display_split_layout = QHBoxLayout(display_split)
+		display_split_layout.setContentsMargins(0, 0, 0, 0)
+		display_split_layout.setSpacing(0)
+		display_split_layout.addWidget(self.display_events_button)
+		display_split_layout.addWidget(self.display_events_arrow_button)
+		control_row.addWidget(display_split)
 		volume_widget = QWidget()
 		volume_layout = QHBoxLayout(volume_widget)
 		volume_layout.setContentsMargins(0, 0, 0, 0)
@@ -563,7 +584,7 @@ class MediaPlayer(QWidget):
 			if event_frame is None:
 				continue
 
-			if current_frame >= event_frame and current_frame < event_frame + frames_visible:
+			if self.display_events and current_frame >= event_frame and current_frame < event_frame + frames_visible:
 				if not self._pass_event_display_filter or self._passes_display_filter(event):
 					label = event.label or "Event"
 					subtype = getattr(event, "subType", None)
@@ -781,6 +802,10 @@ class MediaPlayer(QWidget):
 			current_filter=self._pause_action_filter,
 			on_apply=_apply,
 		)
+
+	def _set_display_events(self, enable):
+		self.display_events = enable
+		self.update_overlay()
 
 	def _open_event_display_filter(self):
 		manager = getattr(self.main_window, "list_manager", None)
