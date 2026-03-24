@@ -402,8 +402,8 @@ class MainWindow(QMainWindow):
 		self.setCentralWidget(central_display)
 
 		top_layout = QHBoxLayout()
-		top_layout.addWidget(video_display)
-		top_layout.addWidget(self.list_display)
+		top_layout.addWidget(video_display, 3)
+		top_layout.addWidget(self.list_display, 1)
 
 		main_layout = QVBoxLayout()
 		main_layout.setContentsMargins(0, 0, 0, 0)

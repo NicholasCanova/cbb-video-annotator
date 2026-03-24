@@ -36,12 +36,13 @@ class MediaPlayer(QWidget):
 		self.video_view.setAttribute(Qt.WA_TranslucentBackground, True)
 		self.video_view.viewport().setAttribute(Qt.WA_TranslucentBackground, True)
 		self.video_view.setFocusPolicy(Qt.NoFocus)
+		self.video_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
 		# Create container widget for video with overlay
 		self.video_container = QWidget()
 		video_container_layout = QVBoxLayout()
 		video_container_layout.setContentsMargins(0, 0, 0, 0)
-		video_container_layout.addWidget(self.video_view)
+		video_container_layout.addWidget(self.video_view, 1)
 		self.video_container.setLayout(video_container_layout)
 
 		# Create overlay label for displaying position and editing mode
@@ -148,12 +149,26 @@ class MediaPlayer(QWidget):
 		self.speed_quad_button.setFocusPolicy(Qt.NoFocus)
 		self.speed_quad_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
+		self.speed_8x_button = QPushButton("8x")
+		self.speed_8x_button.setCheckable(True)
+		self.speed_8x_button.clicked.connect(lambda: self.set_playback_rate(8.0))
+		self.speed_8x_button.setFocusPolicy(Qt.NoFocus)
+		self.speed_8x_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+
+		self.speed_16x_button = QPushButton("16x")
+		self.speed_16x_button.setCheckable(True)
+		self.speed_16x_button.clicked.connect(lambda: self.set_playback_rate(16.0))
+		self.speed_16x_button.setFocusPolicy(Qt.NoFocus)
+		self.speed_16x_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+
 		self._speed_button_group = QButtonGroup(self)
 		self._speed_button_group.setExclusive(True)
 		self._speed_button_group.addButton(self.speed_half_button)
 		self._speed_button_group.addButton(self.speed_normal_button)
 		self._speed_button_group.addButton(self.speed_double_button)
 		self._speed_button_group.addButton(self.speed_quad_button)
+		self._speed_button_group.addButton(self.speed_8x_button)
+		self._speed_button_group.addButton(self.speed_16x_button)
 
 		self.set_playback_rate(1.0)
 
@@ -182,6 +197,11 @@ class MediaPlayer(QWidget):
 		self.volume_slider.valueChanged.connect(self._set_volume)
 		self.volume_slider.setFixedWidth(110)
 		self.volume_slider.setFocusPolicy(Qt.NoFocus)
+
+		self.save_gcs_button = QPushButton("Save to GCS")
+		self.save_gcs_button.clicked.connect(self.save_to_gcs)
+		self.save_gcs_button.setFocusPolicy(Qt.NoFocus)
+		self.save_gcs_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
 		self.help_button = QPushButton("Help")
 		self.help_button.clicked.connect(self._show_help_dialog)
@@ -221,6 +241,8 @@ class MediaPlayer(QWidget):
 		control_row.addWidget(self.speed_normal_button)
 		control_row.addWidget(self.speed_double_button)
 		control_row.addWidget(self.speed_quad_button)
+		control_row.addWidget(self.speed_8x_button)
+		control_row.addWidget(self.speed_16x_button)
 		control_row.addWidget(self.pause_at_events_button)
 		control_row.addWidget(self.pause_actions_button)
 		control_row.addWidget(self.filter_events_button)
@@ -232,12 +254,13 @@ class MediaPlayer(QWidget):
 		volume_layout.addWidget(self.volume_slider)
 		control_row.addWidget(volume_widget)
 		control_row.addWidget(self.help_button)
+		control_row.addWidget(self.save_gcs_button)
 		control_row.addStretch(1)
 		control_row.addWidget(self.fullscreen_button)
 
 		# create vbox layout
 		self.layout = QVBoxLayout()
-		self.layout.addWidget(self.video_container)
+		self.layout.addWidget(self.video_container, 1)
 		self.layout.addWidget(self.slider)
 		self.layout.addLayout(control_row)
 
@@ -253,7 +276,25 @@ class MediaPlayer(QWidget):
 		self.path_label = None
 
 	def open_file(self):
-		filename, _ = QFileDialog.getOpenFileName(self, "Open Video")
+		gcs_path = "/videos"
+		if os.path.isdir(gcs_path):
+			msg = QMessageBox(self)
+			msg.setWindowTitle("Open Video")
+			msg.setText("Where would you like to open a video from?")
+			local_btn = msg.addButton("Local", QMessageBox.ActionRole)
+			gcs_btn = msg.addButton("GCS Bucket", QMessageBox.ActionRole)
+			msg.addButton(QMessageBox.Cancel)
+			msg.exec_()
+			clicked = msg.clickedButton()
+			if clicked == gcs_btn:
+				default_dir = gcs_path
+			elif clicked == local_btn:
+				default_dir = ""
+			else:
+				return
+		else:
+			default_dir = ""
+		filename, _ = QFileDialog.getOpenFileName(self, "Open Video", default_dir)
 
 		if filename != '':
 			self.media_player.setMedia(QMediaContent(QUrl.fromLocalFile(filename)))
@@ -270,17 +311,24 @@ class MediaPlayer(QWidget):
 			try:
 				self.main_window.half = int(filpath[0])
 			except (ValueError, IndexError):
-				QMessageBox.warning(
-					self,
-					"Unsupported filename",
-					"Please choose a video whose name begins with a number (e.g., \"1.mp4\").",
-				)
-				self.media_player.setMedia(QMediaContent())
-				self.play_button.setEnabled(False)
-				return
+				self.main_window.half = 1
 
-			self.path_label = os.path.dirname(filename) + "/Labels.json"
-			self.path_label = self.get_last_label_file()
+			# Store the video source dir for GCS saves
+			self.video_source_dir = os.path.dirname(filename)
+			video_stem = os.path.splitext(filpath)[0]
+			tagger = os.environ.get("TAGGER_NAME", "nick")
+			self.gcs_filename = f"{video_stem}_{tagger}.json"
+
+			# Use a local temp file for session saves (fast)
+			self.path_label = f"/tmp/{self.gcs_filename}"
+
+			# Load existing annotations from GCS if they exist
+			gcs_annotations_dir = self.video_source_dir + "/annotations"
+			gcs_path = gcs_annotations_dir + "/" + self.gcs_filename
+			if os.path.isfile(gcs_path):
+				import shutil
+				shutil.copy2(gcs_path, self.path_label)
+
 			self.main_window.list_manager.create_list_from_json(self.path_label, self.main_window.half)
 			self.main_window.list_display.display_list()
 
@@ -289,12 +337,26 @@ class MediaPlayer(QWidget):
 				pbp.load_pbp(filename)
 
 	def get_last_label_file(self):
-		path_label = self.path_label
-		folder_label = os.path.dirname(path_label)
-		if os.path.isfile(folder_label + "/Labels-v2.json"):
-			return folder_label + "/Labels-v2.json"
-		else:
-			return path_label
+		return self.path_label
+
+	def save_to_gcs(self):
+		if not hasattr(self, 'video_source_dir') or not hasattr(self, 'gcs_filename'):
+			QMessageBox.warning(self, "No video", "Open a video first.")
+			return
+
+		try:
+			# Save current annotations locally first
+			self.main_window.list_manager.save_file(self.path_label, self.main_window.half)
+
+			# Copy to GCS mount
+			import shutil
+			gcs_annotations_dir = self.video_source_dir + "/annotations"
+			os.makedirs(gcs_annotations_dir, exist_ok=True)
+			gcs_path = gcs_annotations_dir + "/" + self.gcs_filename
+			shutil.copy2(self.path_label, gcs_path)
+			QMessageBox.information(self, "Saved", f"Annotations saved to GCS:\n{self.gcs_filename}")
+		except Exception as e:
+			QMessageBox.critical(self, "Save Error", f"Failed to save to GCS:\n{str(e)}")
 
 	def play_video(self):
 		if self.media_player.state() == QMediaPlayer.PlayingState:

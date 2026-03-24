@@ -7,4 +7,5 @@ if __name__ == "__main__":
 
 	application = QApplication(sys.argv)
 	window = MainWindow()
+	window.showMaximized()
 	sys.exit(application.exec_())

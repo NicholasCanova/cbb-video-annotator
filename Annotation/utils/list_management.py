@@ -11,8 +11,9 @@ class ListManager:
 	def create_list_from_json(self, path, half):
 
 		self.event_list.clear()
-		self.event_list = self.read_json(path, half)
-		self.sort_list()
+		if os.path.isfile(path):
+			self.event_list = self.read_json(path, half)
+			self.sort_list()
 
 	def create_text_list(self):
 
@@ -104,6 +105,8 @@ class ListManager:
 	def read_json(self, path, half):
 
 		event_list = list()
+		if not os.path.isfile(path):
+			return event_list
 		with open(path) as file:
 			data = json.load(file)["annotations"]
 
@@ -159,11 +162,12 @@ class ListManager:
 			tmp_dict["frame"] = str(event.frame)
 			annotations_dictionary.append(tmp_dict)
 
-		data = None
-		with open(path, 'r') as original_file:
-			data = json.load(original_file)
+		if os.path.isfile(path):
+			with open(path, 'r') as original_file:
+				data = json.load(original_file)
+		else:
+			data = {}
 		data["annotations"] = annotations_dictionary
 
-		path_to_save = os.path.dirname(path) + "/Labels-v2.json"
-		with open(path_to_save, "w") as save_file:
-			json_data = json.dump(data,save_file, indent=4, sort_keys=True)
+		with open(path, "w") as save_file:
+			json.dump(data, save_file, indent=4, sort_keys=True)
