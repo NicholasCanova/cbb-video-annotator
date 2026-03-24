@@ -96,6 +96,48 @@ QScrollBar::handle:horizontal {
     min-width: 20px;
 }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
+QMenu {
+    background-color: #e8e8e8;
+    color: #1a1a1a;
+    border: 1px solid #b0b0b0;
+    padding: 2px;
+}
+QMenu::item {
+    padding: 4px 20px;
+    min-width: 60px;
+}
+QMenu::item:selected {
+    background-color: #d0d0d0;
+    color: #1a1a1a;
+}
+QComboBox {
+    background-color: #e0e0e0;
+    color: #1a1a1a;
+    border: 1px solid #b0b0b0;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+QComboBox:hover { background-color: #d0d0d0; }
+QComboBox QAbstractItemView {
+    background-color: #e8e8e8;
+    color: #1a1a1a;
+    border: 1px solid #b0b0b0;
+    outline: none;
+    padding: 2px;
+    min-width: 50px;
+}
+QComboBox QAbstractItemView::item {
+    padding: 4px 8px;
+    min-height: 24px;
+}
+QComboBox QAbstractItemView::item:hover {
+    background-color: #d0d0d0;
+    color: #1a1a1a;
+}
+QComboBox QAbstractItemView::item:selected {
+    background-color: #b8b8b8;
+    color: #1a1a1a;
+}
 """
 
 DARK_STYLESHEET = """
@@ -187,6 +229,47 @@ QScrollBar::handle:horizontal {
     min-width: 20px;
 }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
+QMenu {
+    background-color: #1b1f2a;
+    color: #e6e9f2;
+    border: 1px solid #2a3142;
+    padding: 2px;
+}
+QMenu::item {
+    padding: 4px 8px;
+    min-width: 40px;
+}
+QMenu::item:selected {
+    background-color: #22283a;
+    color: #e6e9f2;
+}
+QComboBox {
+    background-color: #1b1f2a;
+    color: #e6e9f2;
+    border: 1px solid #2a3142;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+QComboBox:hover { background-color: #22283a; }
+QComboBox QAbstractItemView {
+    background-color: #1b1f2a;
+    color: #e6e9f2;
+    border: 1px solid #2a3142;
+    outline: none;
+    padding: 2px;
+}
+QComboBox QAbstractItemView::item {
+    padding: 4px 8px;
+    min-height: 24px;
+}
+QComboBox QAbstractItemView::item:hover {
+    background-color: #22283a;
+    color: #e6e9f2;
+}
+QComboBox QAbstractItemView::item:selected {
+    background-color: #2a3142;
+    color: #e6e9f2;
+}
 """
 
 from interface.media_player import MediaPlayer
@@ -203,7 +286,6 @@ class MainWindow(QMainWindow):
 	QUICK_LABEL_COMBOS = {
 		Qt.Key_D: {
 			Qt.Key_D: "Drive",
-			Qt.Key_H: "Handoff",
 			Qt.Key_T: "Defenders Double Team",
 			Qt.Key_S: "Defenders Switch",
 			Qt.Key_F: "Deflection",
@@ -211,6 +293,10 @@ class MainWindow(QMainWindow):
 			Qt.Key_O: "Ballhandler Defender Over Screen",
 			Qt.Key_B: "Dead Ball Turnover",
 			Qt.Key_R: "Defensive Rebound",
+			Qt.Key_G: "Defensive Goaltending",
+		},
+		Qt.Key_H: {
+			Qt.Key_O: "Handoff"
 		},
 		Qt.Key_O: {
 			Qt.Key_B: "On Ball Screen",
@@ -221,11 +307,11 @@ class MainWindow(QMainWindow):
 		},
 		Qt.Key_F: {
 			Qt.Key_H: "Fake Handoff",
-			Qt.Key_T: "Free Throw",
+			Qt.Key_T: "FT Attempt",
 		},
 		Qt.Key_P: {
 			Qt.Key_U: "Post Up",
-			Qt.Key_S: "Pass",
+			Qt.Key_S: "Pass Attempt",
 			Qt.Key_R: "Pass Received",
 		},
 		Qt.Key_S: {
@@ -236,6 +322,9 @@ class MainWindow(QMainWindow):
 			Qt.Key_S: "Screener Slipping the Screen",
 			Qt.Key_T: "Steal",
 			Qt.Key_F: "Shooting Foul",
+			Qt.Key_D: "Screener Defender Dropping",
+			Qt.Key_L: "Screener Defender at the Level",
+			Qt.Key_H: "Screener Defender Hedging",
 		},
 		Qt.Key_T: {
 			Qt.Key_S: "Transition",
@@ -246,23 +335,20 @@ class MainWindow(QMainWindow):
 		},
 		Qt.Key_C: {
 			Qt.Key_T: "Cut",
-			Qt.Key_F: "Common Foul",
+			Qt.Key_F: "Non-shooting Foul",
 		},
 		Qt.Key_B: {
 			Qt.Key_S: "Blocked Shot",
 		},
 		Qt.Key_R: {
-			Qt.Key_S: "Ballhandler Rejects Screen",
-			Qt.Key_U: "Roller Defender Up on Screen",
-			Qt.Key_D: "Roller Defender Dropping",
-			Qt.Key_H: "Roller Defender Hedging",
-			Qt.Key_L: "Roller Defender at the Level"
+			Qt.Key_S: "Ballhandler Rejects the Screen",
+
 		},
 		Qt.Key_At: { # Shift + 2
-			Qt.Key_P: "2P Shot",
+			Qt.Key_P: "2PT Attempt",
 		},
 		Qt.Key_NumberSign: { # Shift + 3
-			Qt.Key_P: "3P Shot",
+			Qt.Key_P: "3PT Attempt",
 		},
 		Qt.Key_M: {
 			Qt.Key_S: "Made Shot",
@@ -276,57 +362,62 @@ class MainWindow(QMainWindow):
 			Qt.Key_ParenRight: "10 Second Violation", # Shift + V + 0
 			Qt.Key_S: "Shot Clock Violation", 
 			Qt.Key_T: "Travel Violation",
-			Qt.Key_O: "Offensive Goaltending Violation", 
+			Qt.Key_O: "Offensive Goaltending", 
 			Qt.Key_L: "Free Throw Lane Violation",
 		}
 	}
 	QUICK_LABEL_NAMES = [
-		"Common Foul",
 		"Drive",
-		"Handoff",
-		"Defenders Double Team",
-		"Defenders Switch",
-		"Deflection",
 		"On Ball Screen",
-		"Off Ball Screen",
-		"Offensive Foul",
-		"Ballhandler Rejects Screen",
-		"Ballhandler Defender Over Screen",
-		"Ballhandler Defender Under Screen",
+		"Handoff",
 		"Fake Handoff",
-		"Free Throw",
+		"Off Ball Screen",
 		"Post Up",
-		"Pass",
-		# "Spot Up",
+		"Isolation",
+		"Cut",
+		"Transition",
+
 		"Screener Rolling to Rim",
 		"Screener Popping",
 		"Screener Ghosting",
 		"Screener Slipping the Screen",
-		"Isolation",
-		"Cut",
-		"Blocked Shot",
-		"Roller Defender Up on Screen",
-		"Roller Defender Dropping",
-		"Roller Defender Hedging",
-		"Roller Defender at the Level",
-		"Defensive Rebound",
-		"Offensive Rebound",
-		"2P Shot",
-		"3P Shot",
+		"Ballhandler Rejects the Screen",
+
+		"Defenders Double Team",
+		"Defenders Switch",
+		"Ballhandler Defender Over Screen",
+		"Ballhandler Defender Under Screen",
+		"Screener Defender Dropping",
+		"Screener Defender Hedging",
+		"Screener Defender at the Level",
+
+		"3PT Attempt",
+		"2PT Attempt",
+		"FT Attempt",
 		"Made Shot",
 		"Missed Shot",
-		"Transition",
-		"Inbound Pass",
+		"Blocked Shot",
+		"Offensive Rebound",
+		"Defensive Rebound",
+		
 		"Shooting Foul",
-		"Steal",
+		"Non-shooting Foul",
+
+		"Pass Attempt",
 		"Pass Received",
+		"Inbound Pass",
+		"Deflection",
 		"Out of Bounds",
+		"Steal",
+		"Defensive Goaltending",
+
+		"Offensive Foul",
 		"3 Second Violation",
 		"5 Second Violation",
 		"10 Second Violation",
 		"Shot Clock Violation",
 		"Travel Violation",
-		"Offensive Goaltending Violation",
+		"Offensive Goaltending",
 		"Free Throw Lane Violation",
 	]
 	def __init__(self):
@@ -825,6 +916,6 @@ class MainWindow(QMainWindow):
 			self._apply_theme(self._rb_dark.isChecked())
 
 	def closeEvent(self, event):
-		# Clean up media player before closing
+		self.media_player.save_on_exit()
 		self.media_player.cleanup()
 		event.accept()

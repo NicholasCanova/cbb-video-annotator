@@ -1,9 +1,11 @@
 # Adapted from https://codeloop.org/python-how-to-create-media-player-in-pyqt5/
 import os
+import shutil
 from bisect import bisect_left
 
 import cv2
-from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel, QGraphicsView, QGraphicsScene, QMessageBox, QDialog, QListWidget, QListWidgetItem, QDialogButtonBox, QSizePolicy, QButtonGroup
+from interface.video_exporter import start_export
+from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel, QGraphicsView, QGraphicsScene, QMessageBox, QDialog, QListWidget, QListWidgetItem, QDialogButtonBox, QSizePolicy, QMenu
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaMetaData
 from PyQt5.QtMultimediaWidgets import QGraphicsVideoItem
 from PyQt5.QtCore import Qt, QUrl, QEvent, QSizeF, QSize
@@ -105,6 +107,7 @@ class MediaPlayer(QWidget):
 		self.pause_at_event_frames = []
 		self._pause_action_filter = None
 		self._pass_event_display_filter = None
+		self.display_events = False
 		self._next_pause_index = 0
 		self._last_position_frame = 0
 		self._pause_event_source = None
@@ -112,10 +115,18 @@ class MediaPlayer(QWidget):
 		self.video_container.installEventFilter(self)
 
 		# Button to open a new file
+		self._current_video_path = None
+
 		self.open_file_button = QPushButton('Open video')
 		self.open_file_button.clicked.connect(self.open_file)
 		self.open_file_button.setFocusPolicy(Qt.NoFocus)
 		self.open_file_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+
+		self.save_events_button = QPushButton('Save Events')
+		self.save_events_button.clicked.connect(self.show_save_events_dialog)
+		self.save_events_button.setFocusPolicy(Qt.NoFocus)
+		self.save_events_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.save_events_button.setEnabled(False)
 
 		# Button for playing the video
 		self.play_button = QPushButton()
@@ -125,50 +136,41 @@ class MediaPlayer(QWidget):
 		self.play_button.setFocusPolicy(Qt.NoFocus)
 		self.play_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
-		self.speed_half_button = QPushButton("1/2x")
-		self.speed_half_button.setCheckable(True)
-		self.speed_half_button.clicked.connect(lambda: self.set_playback_rate(0.5))
-		self.speed_half_button.setFocusPolicy(Qt.NoFocus)
-		self.speed_half_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self._speed_options = [("1/2x", 0.5), ("1x", 1.0), ("2x", 2.0), ("4x", 4.0), ("8x", 8.0), ("16x", 16.0)]
+		self.speed_button = QPushButton("1x")
+		self.speed_button.setFocusPolicy(Qt.NoFocus)
+		self.speed_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.speed_button.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+		self.speed_button.setStyleSheet(
+			"QPushButton { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: none; }"
+		)
+		self.speed_arrow_button = QPushButton("▾")
+		self.speed_arrow_button.setFocusPolicy(Qt.NoFocus)
+		self.speed_arrow_button.setFixedWidth(20)
+		self.speed_arrow_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+		self.speed_arrow_button.clicked.connect(self._open_speed_menu)
+		self.speed_arrow_button.setStyleSheet(
+			"QPushButton { border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 0px 2px; }"
+		)
 
-		self.speed_normal_button = QPushButton("1x")
-		self.speed_normal_button.setCheckable(True)
-		self.speed_normal_button.clicked.connect(lambda: self.set_playback_rate(1.0))
-		self.speed_normal_button.setFocusPolicy(Qt.NoFocus)
-		self.speed_normal_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
-
-		self.speed_double_button = QPushButton("2x")
-		self.speed_double_button.setCheckable(True)
-		self.speed_double_button.clicked.connect(lambda: self.set_playback_rate(2.0))
-		self.speed_double_button.setFocusPolicy(Qt.NoFocus)
-		self.speed_double_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
-
-		self.speed_quad_button = QPushButton("4x")
-		self.speed_quad_button.setCheckable(True)
-		self.speed_quad_button.clicked.connect(lambda: self.set_playback_rate(4.0))
-		self.speed_quad_button.setFocusPolicy(Qt.NoFocus)
-		self.speed_quad_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
-
-		self.speed_8x_button = QPushButton("8x")
-		self.speed_8x_button.setCheckable(True)
-		self.speed_8x_button.clicked.connect(lambda: self.set_playback_rate(8.0))
-		self.speed_8x_button.setFocusPolicy(Qt.NoFocus)
-		self.speed_8x_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
-
-		self.speed_16x_button = QPushButton("16x")
-		self.speed_16x_button.setCheckable(True)
-		self.speed_16x_button.clicked.connect(lambda: self.set_playback_rate(16.0))
-		self.speed_16x_button.setFocusPolicy(Qt.NoFocus)
-		self.speed_16x_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
-
-		self._speed_button_group = QButtonGroup(self)
-		self._speed_button_group.setExclusive(True)
-		self._speed_button_group.addButton(self.speed_half_button)
-		self._speed_button_group.addButton(self.speed_normal_button)
-		self._speed_button_group.addButton(self.speed_double_button)
-		self._speed_button_group.addButton(self.speed_quad_button)
-		self._speed_button_group.addButton(self.speed_8x_button)
-		self._speed_button_group.addButton(self.speed_16x_button)
+		self.rewind_label = QLabel("Rewind:")
+		self.rewind_label.setFocusPolicy(Qt.NoFocus)
+		self.rewind_5_button = QPushButton("5s")
+		self.rewind_5_button.setFocusPolicy(Qt.NoFocus)
+		self.rewind_5_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.rewind_5_button.clicked.connect(lambda: self.rewind(5))
+		self.rewind_10_button = QPushButton("10s")
+		self.rewind_10_button.setFocusPolicy(Qt.NoFocus)
+		self.rewind_10_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.rewind_10_button.clicked.connect(lambda: self.rewind(10))
+		self.rewind_20_button = QPushButton("20s")
+		self.rewind_20_button.setFocusPolicy(Qt.NoFocus)
+		self.rewind_20_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.rewind_20_button.clicked.connect(lambda: self.rewind(20))
+		self.rewind_30_button = QPushButton("30s")
+		self.rewind_30_button.setFocusPolicy(Qt.NoFocus)
+		self.rewind_30_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.rewind_30_button.clicked.connect(lambda: self.rewind(30))
 
 		self.set_playback_rate(1.0)
 
@@ -198,10 +200,6 @@ class MediaPlayer(QWidget):
 		self.volume_slider.setFixedWidth(110)
 		self.volume_slider.setFocusPolicy(Qt.NoFocus)
 
-		self.save_gcs_button = QPushButton("Save to GCS")
-		self.save_gcs_button.clicked.connect(self.save_to_gcs)
-		self.save_gcs_button.setFocusPolicy(Qt.NoFocus)
-		self.save_gcs_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
 		self.help_button = QPushButton("Help")
 		self.help_button.clicked.connect(self._show_help_dialog)
@@ -220,32 +218,71 @@ class MediaPlayer(QWidget):
 		self.pause_at_events_button.toggled.connect(self._set_pause_at_events)
 		self.pause_at_events_button.setFocusPolicy(Qt.NoFocus)
 		self.pause_at_events_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.pause_at_events_button.setStyleSheet(
+			"QPushButton { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: none; }"
+		)
 
-		self.pause_actions_button = QPushButton("Choose Pause Actions")
-		self.pause_actions_button.clicked.connect(self._open_pause_action_selector)
-		self.pause_actions_button.setFocusPolicy(Qt.NoFocus)
-		self.pause_actions_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.pause_actions_arrow_button = QPushButton("▾")
+		self.pause_actions_arrow_button.clicked.connect(self._open_pause_action_selector)
+		self.pause_actions_arrow_button.setFocusPolicy(Qt.NoFocus)
+		self.pause_actions_arrow_button.setFixedWidth(20)
+		self.pause_actions_arrow_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+		self.pause_actions_arrow_button.setStyleSheet(
+			"QPushButton { border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 0px 2px; }"
+		)
 
-		self.filter_events_button = QPushButton("Filter Displayed Events")
-		self.filter_events_button.clicked.connect(self._open_event_display_filter)
-		self.filter_events_button.setFocusPolicy(Qt.NoFocus)
-		self.filter_events_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.display_events_button = QPushButton("Display Events")
+		self.display_events_button.setCheckable(True)
+		self.display_events_button.setChecked(False)
+		self.display_events_button.toggled.connect(self._set_display_events)
+		self.display_events_button.setFocusPolicy(Qt.NoFocus)
+		self.display_events_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.display_events_button.setStyleSheet(
+			"QPushButton { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: none; }"
+		)
+
+		self.display_events_arrow_button = QPushButton("▾")
+		self.display_events_arrow_button.clicked.connect(self._open_event_display_filter)
+		self.display_events_arrow_button.setFocusPolicy(Qt.NoFocus)
+		self.display_events_arrow_button.setFixedWidth(20)
+		self.display_events_arrow_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+		self.display_events_arrow_button.setStyleSheet(
+			"QPushButton { border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 0px 2px; }"
+		)
 
 		# create hbox layout for controls
 		control_row = QHBoxLayout()
 		control_row.setContentsMargins(0, 0, 0, 0)
 		control_row.setSpacing(12)
 		control_row.addWidget(self.open_file_button)
+		control_row.addWidget(self.save_events_button)
 		control_row.addWidget(self.play_button)
-		control_row.addWidget(self.speed_half_button)
-		control_row.addWidget(self.speed_normal_button)
-		control_row.addWidget(self.speed_double_button)
-		control_row.addWidget(self.speed_quad_button)
-		control_row.addWidget(self.speed_8x_button)
-		control_row.addWidget(self.speed_16x_button)
-		control_row.addWidget(self.pause_at_events_button)
-		control_row.addWidget(self.pause_actions_button)
-		control_row.addWidget(self.filter_events_button)
+		speed_split = QWidget()
+		speed_split_layout = QHBoxLayout(speed_split)
+		speed_split_layout.setContentsMargins(0, 0, 0, 0)
+		speed_split_layout.setSpacing(0)
+		speed_split_layout.addWidget(self.speed_button)
+		speed_split_layout.addWidget(self.speed_arrow_button)
+		control_row.addWidget(speed_split)
+		control_row.addWidget(self.rewind_label)
+		control_row.addWidget(self.rewind_5_button)
+		control_row.addWidget(self.rewind_10_button)
+		control_row.addWidget(self.rewind_20_button)
+		control_row.addWidget(self.rewind_30_button)
+		pause_split = QWidget()
+		pause_split_layout = QHBoxLayout(pause_split)
+		pause_split_layout.setContentsMargins(0, 0, 0, 0)
+		pause_split_layout.setSpacing(0)
+		pause_split_layout.addWidget(self.pause_at_events_button)
+		pause_split_layout.addWidget(self.pause_actions_arrow_button)
+		control_row.addWidget(pause_split)
+		display_split = QWidget()
+		display_split_layout = QHBoxLayout(display_split)
+		display_split_layout.setContentsMargins(0, 0, 0, 0)
+		display_split_layout.setSpacing(0)
+		display_split_layout.addWidget(self.display_events_button)
+		display_split_layout.addWidget(self.display_events_arrow_button)
+		control_row.addWidget(display_split)
 		volume_widget = QWidget()
 		volume_layout = QHBoxLayout(volume_widget)
 		volume_layout.setContentsMargins(0, 0, 0, 0)
@@ -254,7 +291,6 @@ class MediaPlayer(QWidget):
 		volume_layout.addWidget(self.volume_slider)
 		control_row.addWidget(volume_widget)
 		control_row.addWidget(self.help_button)
-		control_row.addWidget(self.save_gcs_button)
 		control_row.addStretch(1)
 		control_row.addWidget(self.fullscreen_button)
 
@@ -297,8 +333,10 @@ class MediaPlayer(QWidget):
 		filename, _ = QFileDialog.getOpenFileName(self, "Open Video", default_dir)
 
 		if filename != '':
+			self._current_video_path = filename
 			self.media_player.setMedia(QMediaContent(QUrl.fromLocalFile(filename)))
 			self.play_button.setEnabled(True)
+			self.save_events_button.setEnabled(True)
 
 			fps = self._read_video_frame_rate(filename)
 			if fps:
@@ -321,13 +359,23 @@ class MediaPlayer(QWidget):
 
 			# Use a local temp file for session saves (fast)
 			self.path_label = f"/tmp/{self.gcs_filename}"
+			if os.path.isfile(self.path_label):
+				os.remove(self.path_label)
 
 			# Load existing annotations from GCS if they exist
 			gcs_annotations_dir = self.video_source_dir + "/annotations"
 			gcs_path = gcs_annotations_dir + "/" + self.gcs_filename
 			if os.path.isfile(gcs_path):
-				import shutil
 				shutil.copy2(gcs_path, self.path_label)
+				self.annotations_save_path = gcs_path
+			else:
+				# Fall back to Labels-v2.json in the video directory
+				labels_v2_path = self.video_source_dir + "/Labels-v2.json"
+				if os.path.isfile(labels_v2_path):
+					shutil.copy2(labels_v2_path, self.path_label)
+					self.annotations_save_path = labels_v2_path
+				else:
+					self.annotations_save_path = gcs_path
 
 			self.main_window.list_manager.create_list_from_json(self.path_label, self.main_window.half)
 			self.main_window.list_display.display_list()
@@ -339,6 +387,21 @@ class MediaPlayer(QWidget):
 	def get_last_label_file(self):
 		return self.path_label
 
+	def show_save_events_dialog(self):
+		dialog = QDialog(self)
+		dialog.setWindowTitle("Save Events")
+		layout = QVBoxLayout(dialog)
+
+		export_btn = QPushButton("Export Annotated Video")
+		export_btn.clicked.connect(lambda: (dialog.accept(), start_export(self)))
+		layout.addWidget(export_btn)
+
+		gcs_btn = QPushButton("Save Annotations to GCS")
+		gcs_btn.clicked.connect(lambda: (dialog.accept(), self.save_to_gcs()))
+		layout.addWidget(gcs_btn)
+
+		dialog.exec_()
+
 	def save_to_gcs(self):
 		if not hasattr(self, 'video_source_dir') or not hasattr(self, 'gcs_filename'):
 			QMessageBox.warning(self, "No video", "Open a video first.")
@@ -349,7 +412,6 @@ class MediaPlayer(QWidget):
 			self.main_window.list_manager.save_file(self.path_label, self.main_window.half)
 
 			# Copy to GCS mount
-			import shutil
 			gcs_annotations_dir = self.video_source_dir + "/annotations"
 			os.makedirs(gcs_annotations_dir, exist_ok=True)
 			gcs_path = gcs_annotations_dir + "/" + self.gcs_filename
@@ -371,19 +433,27 @@ class MediaPlayer(QWidget):
 		if list_display:
 			list_display._show_help()
 
+	def rewind(self, seconds):
+		new_pos = max(0, self.media_player.position() - seconds * 1000)
+		self.media_player.setPosition(new_pos)
+
+	def _open_speed_menu(self):
+		menu = QMenu(self)
+		menu.setFixedWidth(70)
+		for label, rate in self._speed_options:
+			action = menu.addAction(label)
+			action.triggered.connect(lambda checked, r=rate: self.set_playback_rate(r))
+		menu.exec_(self.speed_button.mapToGlobal(self.speed_button.rect().bottomLeft()))
+
 	def set_playback_rate(self, rate):
 		position = self.media_player.position()
 		self.media_player.setPlaybackRate(rate)
 		self.media_player.setPosition(position)
 
-		button_map = {
-			0.5: self.speed_half_button,
-			1.0: self.speed_normal_button,
-			2.0: self.speed_double_button,
-			4.0: self.speed_quad_button,
-		}
-		for r, btn in button_map.items():
-			btn.setChecked(r == rate)
+		for label, r in self._speed_options:
+			if r == rate:
+				self.speed_button.setText(label)
+				break
 
 	def _set_volume(self, value):
 		self.media_player.setVolume(value)
@@ -539,7 +609,7 @@ class MediaPlayer(QWidget):
 			if event_frame is None:
 				continue
 
-			if current_frame >= event_frame and current_frame < event_frame + frames_visible:
+			if self.display_events and current_frame >= event_frame and current_frame < event_frame + frames_visible:
 				if not self._pass_event_display_filter or self._passes_display_filter(event):
 					label = event.label or "Event"
 					subtype = getattr(event, "subType", None)
@@ -758,6 +828,10 @@ class MediaPlayer(QWidget):
 			on_apply=_apply,
 		)
 
+	def _set_display_events(self, enable):
+		self.display_events = enable
+		self.update_overlay()
+
 	def _open_event_display_filter(self):
 		manager = getattr(self.main_window, "list_manager", None)
 		if not manager:
@@ -841,6 +915,18 @@ class MediaPlayer(QWidget):
 			self._position_pass_label()
 
 		return super().eventFilter(obj, event)
+
+	def save_on_exit(self):
+		if not hasattr(self, 'path_label') or not self.path_label:
+			return
+		if not hasattr(self, 'annotations_save_path') or not self.annotations_save_path:
+			return
+		try:
+			self.main_window.list_manager.save_file(self.path_label, self.main_window.half)
+			os.makedirs(os.path.dirname(self.annotations_save_path), exist_ok=True)
+			shutil.copy2(self.path_label, self.annotations_save_path)
+		except Exception:
+			pass
 
 	def cleanup(self):
 		# clean up media player resources to prevent segfaults

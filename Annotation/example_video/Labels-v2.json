@@ -6,6 +6,7 @@
             "frame": "202",
             "gameTime": "1 - 00:06",
             "label": "Made Shot",
+            "note": "None",
             "position": "6761",
             "subType": "None",
             "visibility": "visible"
@@ -14,6 +15,7 @@
             "frame": "167",
             "gameTime": "1 - 00:05",
             "label": "2P Shot",
+            "note": "None",
             "position": "5608",
             "subType": "Other",
             "visibility": "visible"
@@ -22,6 +24,7 @@
             "frame": "133",
             "gameTime": "1 - 00:04",
             "label": "Pass",
+            "note": "None",
             "position": "4445",
             "subType": "None",
             "visibility": "visible"
@@ -30,16 +33,27 @@
             "frame": "121",
             "gameTime": "1 - 00:04",
             "label": "Off Ball Screen",
-            "position": "4041",
-            "subType": "Left",
+            "note": "None",
+            "position": "4040",
+            "subType": "None",
             "visibility": "None"
         },
         {
             "frame": "50",
             "gameTime": "1 - 00:01",
             "label": "Off Ball Screen",
-            "position": "1668",
-            "subType": "Right",
+            "note": "None",
+            "position": "1666",
+            "subType": "None",
+            "visibility": "None"
+        },
+        {
+            "frame": "2",
+            "gameTime": "1 - 00:00",
+            "label": "Off Ball Screen",
+            "note": "None",
+            "position": "61",
+            "subType": "None",
             "visibility": "None"
         }
     ],

@@ -2,7 +2,7 @@ from enum import IntEnum
 from pathlib import Path
 import json
 
-from PyQt5.QtWidgets import QMainWindow, QWidget, QListWidget, QHBoxLayout
+from PyQt5.QtWidgets import QMainWindow, QWidget, QListWidget, QHBoxLayout, QVBoxLayout, QLabel, QLineEdit
 from PyQt5.QtGui import QPalette
 from PyQt5.QtCore import Qt
 
@@ -27,6 +27,7 @@ class EventSelectionWindow(QMainWindow):
 
 		# Setting the window appropriately
 		self.setWindowTitle(self.title_window)
+		self.setWindowModality(Qt.ApplicationModal)
 		self.set_position()
 
 		self.palette_main_window = self.palette()
@@ -39,11 +40,14 @@ class EventSelectionWindow(QMainWindow):
 		# Allow the code to be run from any working directory
 		base = Path(__file__).resolve().parent
 
-		# Read the available labels for action types and subtypes
-		self.labels = self._read_labels(base / "../config/classes.txt")
-		self.label_map = self._read_label_map(base / "../config/second_classes.json")
-		self.third_label_map = self._read_label_map(base / "../config/third_classes.json")
-		self.fourth_labels = self._read_labels(base / "../config/fourth_classes.txt")
+		# Read all config from single classes.json
+		with (base / "../config/classes.json").open() as fh:
+			cfg = json.load(fh)
+
+		self.labels = cfg.get("labels", [])
+		self.label_map = self._process_label_map(cfg.get("subtypes", {}))
+		self.third_label_map = self._process_label_map(cfg.get("third", {}))
+		self.fourth_labels = cfg.get("visibility", [])
 
 		# Setup the list widgets
 		self.list_widget = QListWidget()
@@ -66,11 +70,19 @@ class EventSelectionWindow(QMainWindow):
 		central_display = QWidget(self)
 		self.setCentralWidget(central_display)
 
-		final_layout = QHBoxLayout()
-		final_layout.addWidget(self.list_widget)
-		final_layout.addWidget(self.list_widget_second)
-		final_layout.addWidget(self.list_widget_third)
-		final_layout.addWidget(self.list_widget_fourth)
+		lists_layout = QHBoxLayout()
+		lists_layout.addWidget(self.list_widget)
+		lists_layout.addWidget(self.list_widget_second)
+		lists_layout.addWidget(self.list_widget_third)
+		lists_layout.addWidget(self.list_widget_fourth)
+
+		self.note_input = QLineEdit()
+		self.note_input.setPlaceholderText("Note (optional)")
+		self.note_input.setFocusPolicy(Qt.ClickFocus)
+
+		final_layout = QVBoxLayout()
+		final_layout.addLayout(lists_layout)
+		final_layout.addWidget(self.note_input)
 		central_display.setLayout(final_layout)
 
 		self.step = Step.FIRST
@@ -84,20 +96,7 @@ class EventSelectionWindow(QMainWindow):
 		self._set_column_visibility(show_second=True, show_third=False, show_fourth=True)
 
 
-	def _read_labels(self, path: Path):
-		if not path.exists():
-			return []
-		return [l.strip() for l in path.read_text().splitlines() if l.strip()]
-
-	def _read_label_map(self, path: Path):
-		if not path.exists():
-			return {}
-		try:
-			with path.open() as fh:
-				data = json.load(fh)
-		except (json.JSONDecodeError, IOError):
-			return {}
-
+	def _process_label_map(self, data: dict):
 		mapping = {}
 		for key, value in data.items():
 			if not key or not isinstance(value, list):
@@ -105,7 +104,6 @@ class EventSelectionWindow(QMainWindow):
 			items = [str(item).strip() for item in value if str(item).strip()]
 			if items:
 				mapping[str(key).strip()] = items
-
 		return mapping
 
 	def _labels_for(self, first_label, label_map):
@@ -243,15 +241,16 @@ class EventSelectionWindow(QMainWindow):
 			if self.main_window.editing_event and self.main_window.edit_event_obj:
 				self.main_window.list_manager.delete_event(self.main_window.edit_event_obj)
 
+			note_text = self.note_input.text().strip() or None
 			self.main_window.list_manager.add_event(Event(
 				self.first_label,
 				self.main_window.half,
 				ms_to_time(position),
 				self.second_label,
 				position,
-				self.third_label,
-				self.main_window.position_to_frame(position),
 				fourth_label,
+				self.main_window.position_to_frame(position),
+				note=note_text,
 			))
 
 			self.main_window.list_display.display_list()
@@ -363,6 +362,7 @@ class EventSelectionWindow(QMainWindow):
 		self.list_widget_second.clearFocus()
 		self.list_widget_third.clearFocus()
 		self.list_widget_fourth.clearFocus()
+		self.note_input.clear()
 
 		self.hide()
 		self.main_window.setFocus()
@@ -398,6 +398,14 @@ class EventSelectionWindow(QMainWindow):
 		if not self.preselect_first_label(event.label):
 			return False
 
+		if event.note:
+			self.note_input.setText(event.note)
+
+		# If no subtypes for this label, preselect_first_label already moved to FOURTH
+		if self.step == Step.FOURTH:
+			self._match_and_select(self.list_widget_fourth, event.visibility)
+			return True
+
 		second_match = self._match_and_select(self.list_widget_second, event.subType)
 		if not second_match:
 			self.step = Step.SECOND
@@ -406,9 +414,11 @@ class EventSelectionWindow(QMainWindow):
 		self.second_label = second_match
 
 		has_third = self._populate_third_list(self.first_label)
+
 		if not has_third:
 			self.step = Step.FOURTH
 			self._enter_step(self.list_widget_fourth)
+			self._match_and_select(self.list_widget_fourth, event.visibility)
 			return True
 
 		self.step = Step.THIRD
