@@ -1,0 +1,52 @@
+Suggested VM settings for the first cbb-video-annotator CRD pilot
+
+1. OS / image
+- Debian 12 or Ubuntu 22.04 LTS
+- Pick one and stick to it for the pilot; Debian 12 is a clean default
+
+2. Machine type
+- Start with e2-standard-2
+- That gives 2 vCPU / 8 GB RAM
+- If video playback feels underpowered, try e2-standard-4 next
+
+3. Disk
+- Boot disk: 30-50 GB persistent disk
+- Do not use a tiny disk; Docker image layers, apt packages, and local temp annotation files add up
+- Keep the disk persistent; do not auto-delete it during the pilot
+
+4. Networking
+- External IP is fine for the first test
+- CRD does not require custom inbound firewall ports to be opened by you
+- SSH access should remain enabled for setup and debugging
+
+5. Availability / lifecycle
+- One VM for the first pilot
+- No Managed Instance Group yet
+- No autoscaling
+- Consider deletion protection if this will hold ongoing annotation work
+
+6. Service account
+- Attach a dedicated VM service account
+- Give that service account bucket permissions as described in iam-setup.txt
+- Prefer attached service account auth over downloading a JSON key onto the VM
+
+7. Region / zone
+- Put the VM in the same region as the GCS bucket if practical
+- That keeps access simple and may reduce latency a bit
+
+8. GPU
+- Do not start with a GPU
+- Test CRD quality first before adding more cost and complexity
+
+9. What to do after VM creation
+- SSH into the VM
+- Run vm-crd-deploy/vm-bootstrap-crd.sh
+- Authorize Chrome Remote Desktop
+- Mount the bucket with vm-crd-deploy/mount-videos.sh
+- Build the Docker image
+- Launch the app with vm-crd-deploy/run-annotator.sh
+
+10. If the pilot works
+- Snapshot or image the VM
+- Reuse that image for later tagger VMs
+- Optionally automate the bucket mount and app launch with systemd

@@ -1,0 +1,74 @@
+Suggested IAM / service account setup for cbb-video-annotator VM
+
+Goal
+- Let the VM mount the GCS bucket and read video files
+- Let the app write annotation output files back to the bucket
+- Avoid storing a long-lived service account JSON key on the VM if possible
+
+Recommended approach
+- Create a dedicated service account for the VM
+- Attach that service account directly to the Compute Engine VM
+- Let Application Default Credentials / metadata-based auth handle gcsfuse access
+
+Why this is preferred
+- No JSON key file to distribute or rotate
+- Less chance of credential leakage on disk
+- Cleaner GCP-native auth model
+
+What to create
+- A service account such as:
+  video-annotator-vm@YOUR_PROJECT_ID.iam.gserviceaccount.com
+
+Suggested bucket permissions
+- Minimum practical starting point for the pilot:
+  Storage Object Admin on the specific annotation bucket
+
+Why start there
+- The app needs to read source videos
+- The app needs to read existing annotation files
+- The app needs to create and overwrite annotation files
+- Storage Object Admin is broader than ideal, but very simple for the pilot
+
+Suggested scope of access
+- Grant on the bucket, not the whole project, if possible
+- Example target bucket:
+  gs://cbb-tracking
+
+What this looks like conceptually
+- Principal: the VM service account
+- Resource: the specific bucket
+- Role: Storage Object Admin
+
+Tighter version later
+- If you want to reduce permissions after the pilot, move toward the narrowest combination that still works
+- In practice, for this app, the account needs:
+  read existing objects
+  create new objects
+  overwrite/update annotation objects
+- If bucket-level role splitting becomes annoying, keeping bucket-scoped Storage Object Admin may be the right tradeoff
+
+What not to do first
+- Do not start by creating and copying a service account JSON key onto the VM unless you have to
+- Do not grant broad project-wide Owner or Editor just to make gcsfuse work
+
+How permissions work here
+1. The VM runs with an attached service account
+2. gcsfuse uses the VM's identity from the metadata server
+3. GCS checks the IAM permissions on that identity
+4. If allowed, the bucket mount works and file operations succeed
+
+When would a JSON key be needed
+- Usually only if the process is running outside GCP and cannot use attached service account auth
+- That is not the preferred case for this VM deployment
+
+What the developer should verify
+- The VM has the intended service account attached
+- The bucket grant was applied to that service account
+- gcsfuse mount succeeds
+- The app can read videos from /videos
+- The app can create or update annotation files in the bucket-backed path
+
+Short recommendation
+- Use an attached VM service account
+- Start with bucket-scoped Storage Object Admin on the annotation bucket
+- Tighten later only if needed
