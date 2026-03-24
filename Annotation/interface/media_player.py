@@ -142,6 +142,25 @@ class MediaPlayer(QWidget):
 		self.speed_combo.setCurrentIndex(1)  # default 1x
 		self.speed_combo.currentIndexChanged.connect(lambda i: self.set_playback_rate(self._speed_options[i][1]))
 
+		self.rewind_label = QLabel("Rewind:")
+		self.rewind_label.setFocusPolicy(Qt.NoFocus)
+		self.rewind_5_button = QPushButton("5s")
+		self.rewind_5_button.setFocusPolicy(Qt.NoFocus)
+		self.rewind_5_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.rewind_5_button.clicked.connect(lambda: self.rewind(5))
+		self.rewind_10_button = QPushButton("10s")
+		self.rewind_10_button.setFocusPolicy(Qt.NoFocus)
+		self.rewind_10_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.rewind_10_button.clicked.connect(lambda: self.rewind(10))
+		self.rewind_20_button = QPushButton("20s")
+		self.rewind_20_button.setFocusPolicy(Qt.NoFocus)
+		self.rewind_20_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.rewind_20_button.clicked.connect(lambda: self.rewind(20))
+		self.rewind_30_button = QPushButton("30s")
+		self.rewind_30_button.setFocusPolicy(Qt.NoFocus)
+		self.rewind_30_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.rewind_30_button.clicked.connect(lambda: self.rewind(30))
+
 		self.set_playback_rate(1.0)
 
 		# Button for the slider
@@ -207,6 +226,11 @@ class MediaPlayer(QWidget):
 		control_row.addWidget(self.save_events_button)
 		control_row.addWidget(self.play_button)
 		control_row.addWidget(self.speed_combo)
+		control_row.addWidget(self.rewind_label)
+		control_row.addWidget(self.rewind_5_button)
+		control_row.addWidget(self.rewind_10_button)
+		control_row.addWidget(self.rewind_20_button)
+		control_row.addWidget(self.rewind_30_button)
 		control_row.addWidget(self.pause_at_events_button)
 		control_row.addWidget(self.pause_actions_button)
 		control_row.addWidget(self.filter_events_button)
@@ -356,6 +380,10 @@ class MediaPlayer(QWidget):
 		list_display = getattr(self.main_window, "list_display", None)
 		if list_display:
 			list_display._show_help()
+
+	def rewind(self, seconds):
+		new_pos = max(0, self.media_player.position() - seconds * 1000)
+		self.media_player.setPosition(new_pos)
 
 	def set_playback_rate(self, rate):
 		position = self.media_player.position()
