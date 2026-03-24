@@ -96,6 +96,20 @@ QScrollBar::handle:horizontal {
     min-width: 20px;
 }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
+QMenu {
+    background-color: #e8e8e8;
+    color: #1a1a1a;
+    border: 1px solid #b0b0b0;
+    padding: 2px;
+}
+QMenu::item {
+    padding: 4px 20px;
+    min-width: 60px;
+}
+QMenu::item:selected {
+    background-color: #d0d0d0;
+    color: #1a1a1a;
+}
 QComboBox {
     background-color: #e0e0e0;
     color: #1a1a1a;
@@ -215,6 +229,20 @@ QScrollBar::handle:horizontal {
     min-width: 20px;
 }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
+QMenu {
+    background-color: #1b1f2a;
+    color: #e6e9f2;
+    border: 1px solid #2a3142;
+    padding: 2px;
+}
+QMenu::item {
+    padding: 4px 8px;
+    min-width: 40px;
+}
+QMenu::item:selected {
+    background-color: #22283a;
+    color: #e6e9f2;
+}
 QComboBox {
     background-color: #1b1f2a;
     color: #e6e9f2;

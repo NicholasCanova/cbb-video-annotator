@@ -1,10 +1,11 @@
 # Adapted from https://codeloop.org/python-how-to-create-media-player-in-pyqt5/
 import os
+import shutil
 from bisect import bisect_left
 
 import cv2
 from interface.video_exporter import start_export
-from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel, QGraphicsView, QGraphicsScene, QMessageBox, QDialog, QListWidget, QListWidgetItem, QDialogButtonBox, QSizePolicy, QComboBox
+from PyQt5.QtWidgets import QWidget, QPushButton, QStyle, QSlider, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel, QGraphicsView, QGraphicsScene, QMessageBox, QDialog, QListWidget, QListWidgetItem, QDialogButtonBox, QSizePolicy, QMenu
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaMetaData
 from PyQt5.QtMultimediaWidgets import QGraphicsVideoItem
 from PyQt5.QtCore import Qt, QUrl, QEvent, QSizeF, QSize
@@ -136,12 +137,21 @@ class MediaPlayer(QWidget):
 		self.play_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
 
 		self._speed_options = [("1/2x", 0.5), ("1x", 1.0), ("2x", 2.0), ("4x", 4.0), ("8x", 8.0), ("16x", 16.0)]
-		self.speed_combo = QComboBox()
-		self.speed_combo.setFocusPolicy(Qt.NoFocus)
-		for label, _ in self._speed_options:
-			self.speed_combo.addItem(label)
-		self.speed_combo.setCurrentIndex(1)  # default 1x
-		self.speed_combo.currentIndexChanged.connect(lambda i: self.set_playback_rate(self._speed_options[i][1]))
+		self.speed_button = QPushButton("1x")
+		self.speed_button.setFocusPolicy(Qt.NoFocus)
+		self.speed_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+		self.speed_button.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+		self.speed_button.setStyleSheet(
+			"QPushButton { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: none; }"
+		)
+		self.speed_arrow_button = QPushButton("▾")
+		self.speed_arrow_button.setFocusPolicy(Qt.NoFocus)
+		self.speed_arrow_button.setFixedWidth(20)
+		self.speed_arrow_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+		self.speed_arrow_button.clicked.connect(self._open_speed_menu)
+		self.speed_arrow_button.setStyleSheet(
+			"QPushButton { border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 0px 2px; }"
+		)
 
 		self.rewind_label = QLabel("Rewind:")
 		self.rewind_label.setFocusPolicy(Qt.NoFocus)
@@ -247,7 +257,13 @@ class MediaPlayer(QWidget):
 		control_row.addWidget(self.open_file_button)
 		control_row.addWidget(self.save_events_button)
 		control_row.addWidget(self.play_button)
-		control_row.addWidget(self.speed_combo)
+		speed_split = QWidget()
+		speed_split_layout = QHBoxLayout(speed_split)
+		speed_split_layout.setContentsMargins(0, 0, 0, 0)
+		speed_split_layout.setSpacing(0)
+		speed_split_layout.addWidget(self.speed_button)
+		speed_split_layout.addWidget(self.speed_arrow_button)
+		control_row.addWidget(speed_split)
 		control_row.addWidget(self.rewind_label)
 		control_row.addWidget(self.rewind_5_button)
 		control_row.addWidget(self.rewind_10_button)
@@ -350,14 +366,12 @@ class MediaPlayer(QWidget):
 			gcs_annotations_dir = self.video_source_dir + "/annotations"
 			gcs_path = gcs_annotations_dir + "/" + self.gcs_filename
 			if os.path.isfile(gcs_path):
-				import shutil
 				shutil.copy2(gcs_path, self.path_label)
 				self.annotations_save_path = gcs_path
 			else:
 				# Fall back to Labels-v2.json in the video directory
 				labels_v2_path = self.video_source_dir + "/Labels-v2.json"
 				if os.path.isfile(labels_v2_path):
-					import shutil
 					shutil.copy2(labels_v2_path, self.path_label)
 					self.annotations_save_path = labels_v2_path
 				else:
@@ -398,7 +412,6 @@ class MediaPlayer(QWidget):
 			self.main_window.list_manager.save_file(self.path_label, self.main_window.half)
 
 			# Copy to GCS mount
-			import shutil
 			gcs_annotations_dir = self.video_source_dir + "/annotations"
 			os.makedirs(gcs_annotations_dir, exist_ok=True)
 			gcs_path = gcs_annotations_dir + "/" + self.gcs_filename
@@ -424,16 +437,22 @@ class MediaPlayer(QWidget):
 		new_pos = max(0, self.media_player.position() - seconds * 1000)
 		self.media_player.setPosition(new_pos)
 
+	def _open_speed_menu(self):
+		menu = QMenu(self)
+		menu.setFixedWidth(70)
+		for label, rate in self._speed_options:
+			action = menu.addAction(label)
+			action.triggered.connect(lambda checked, r=rate: self.set_playback_rate(r))
+		menu.exec_(self.speed_button.mapToGlobal(self.speed_button.rect().bottomLeft()))
+
 	def set_playback_rate(self, rate):
 		position = self.media_player.position()
 		self.media_player.setPlaybackRate(rate)
 		self.media_player.setPosition(position)
 
-		for i, (_, r) in enumerate(self._speed_options):
+		for label, r in self._speed_options:
 			if r == rate:
-				self.speed_combo.blockSignals(True)
-				self.speed_combo.setCurrentIndex(i)
-				self.speed_combo.blockSignals(False)
+				self.speed_button.setText(label)
 				break
 
 	def _set_volume(self, value):
@@ -904,7 +923,6 @@ class MediaPlayer(QWidget):
 			return
 		try:
 			self.main_window.list_manager.save_file(self.path_label, self.main_window.half)
-			import shutil
 			os.makedirs(os.path.dirname(self.annotations_save_path), exist_ok=True)
 			shutil.copy2(self.path_label, self.annotations_save_path)
 		except Exception:
