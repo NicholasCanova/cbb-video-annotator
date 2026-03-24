@@ -27,6 +27,7 @@ class EventSelectionWindow(QMainWindow):
 
 		# Setting the window appropriately
 		self.setWindowTitle(self.title_window)
+		self.setWindowModality(Qt.ApplicationModal)
 		self.set_position()
 
 		self.palette_main_window = self.palette()
