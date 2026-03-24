@@ -96,6 +96,34 @@ QScrollBar::handle:horizontal {
     min-width: 20px;
 }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
+QComboBox {
+    background-color: #e0e0e0;
+    color: #1a1a1a;
+    border: 1px solid #b0b0b0;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+QComboBox:hover { background-color: #d0d0d0; }
+QComboBox QAbstractItemView {
+    background-color: #e8e8e8;
+    color: #1a1a1a;
+    border: 1px solid #b0b0b0;
+    outline: none;
+    padding: 2px;
+    min-width: 50px;
+}
+QComboBox QAbstractItemView::item {
+    padding: 4px 8px;
+    min-height: 24px;
+}
+QComboBox QAbstractItemView::item:hover {
+    background-color: #d0d0d0;
+    color: #1a1a1a;
+}
+QComboBox QAbstractItemView::item:selected {
+    background-color: #b8b8b8;
+    color: #1a1a1a;
+}
 """
 
 DARK_STYLESHEET = """
@@ -187,6 +215,33 @@ QScrollBar::handle:horizontal {
     min-width: 20px;
 }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
+QComboBox {
+    background-color: #1b1f2a;
+    color: #e6e9f2;
+    border: 1px solid #2a3142;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+QComboBox:hover { background-color: #22283a; }
+QComboBox QAbstractItemView {
+    background-color: #1b1f2a;
+    color: #e6e9f2;
+    border: 1px solid #2a3142;
+    outline: none;
+    padding: 2px;
+}
+QComboBox QAbstractItemView::item {
+    padding: 4px 8px;
+    min-height: 24px;
+}
+QComboBox QAbstractItemView::item:hover {
+    background-color: #22283a;
+    color: #e6e9f2;
+}
+QComboBox QAbstractItemView::item:selected {
+    background-color: #2a3142;
+    color: #e6e9f2;
+}
 """
 
 from interface.media_player import MediaPlayer
