@@ -29,7 +29,9 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install --assume-yes \
 echo "==> Installing Docker from official repo"
 sudo install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/debian/gpg \
-  | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  | sudo tee /tmp/docker.gpg.raw >/dev/null
+sudo gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg < /tmp/docker.gpg.raw
+sudo rm -f /tmp/docker.gpg.raw
 echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" \
   | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
 sudo apt-get update
@@ -44,8 +46,10 @@ sudo systemctl start docker
 sudo usermod -aG docker "$USER"
 
 echo "==> Installing Chrome Remote Desktop"
-curl https://dl.google.com/linux/linux_signing_key.pub \
-  | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/chrome-remote-desktop.gpg
+curl -fsSL https://dl.google.com/linux/linux_signing_key.pub \
+  | sudo tee /tmp/crd.gpg.raw >/dev/null
+sudo gpg --batch --yes --dearmor -o /etc/apt/trusted.gpg.d/chrome-remote-desktop.gpg < /tmp/crd.gpg.raw
+sudo rm -f /tmp/crd.gpg.raw
 echo "deb [arch=amd64] https://dl.google.com/linux/chrome-remote-desktop/deb stable main" \
   | sudo tee /etc/apt/sources.list.d/chrome-remote-desktop.list >/dev/null
 sudo apt-get update
@@ -70,6 +74,11 @@ curl https://packages.cloud.google.com/apt/doc/apt-key.gpg \
   | sudo tee /usr/share/keyrings/cloud.google.asc >/dev/null
 sudo apt-get update
 sudo apt-get install --assume-yes gcsfuse
+
+echo "==> Enabling allow_other for FUSE mounts"
+if ! grep -q "^user_allow_other" /etc/fuse.conf 2>/dev/null; then
+  echo "user_allow_other" | sudo tee -a /etc/fuse.conf >/dev/null
+fi
 
 echo "==> Preparing mountpoint"
 sudo mkdir -p "${VIDEOS_MOUNT}"

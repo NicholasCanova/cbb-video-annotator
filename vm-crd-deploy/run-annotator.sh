@@ -33,4 +33,5 @@ docker run --rm \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
   -v "${HOME}/.Xauthority:/root/.Xauthority:ro" \
   --mount type=bind,source="${VIDEOS_MOUNT}",target="${VIDEOS_MOUNT}" \
+  -v "${HOME}:${HOME}:ro" \
   "${IMAGE_NAME}"

@@ -23,6 +23,6 @@ fi
 
 echo "This script mounts the GCS bucket onto the VM so the annotator can access videos at ${VIDEOS_MOUNT}."
 echo "Mounting gs://${GCS_BUCKET} at ${VIDEOS_MOUNT}"
-gcsfuse "${GCS_BUCKET}" "${VIDEOS_MOUNT}"
+sudo gcsfuse -o allow_other --only-dir video/video-annotation-tasks "${GCS_BUCKET}" "${VIDEOS_MOUNT}"
 
 echo "Mount complete."

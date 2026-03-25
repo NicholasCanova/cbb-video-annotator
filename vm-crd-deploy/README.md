@@ -36,33 +36,66 @@ chmod +x ~/vm-bootstrap-crd.sh
 newgrp docker
 ```
 
-6. Complete Chrome Remote Desktop authorization in the browser:
-
-```text
-https://remotedesktop.google.com/headless
-```
-
-7. Clone the repo on the VM:
+6. Verify the bootstrap installed everything:
 
 ```bash
-git clone git@github.com:YOUR_USERNAME/cbb-video-annotator.git ~/cbb-video-annotator
+docker --version                         # Docker CE
+dpkg -l | grep chrome-remote-desktop     # CRD
+which gcsfuse                            # gcsfuse
+git --version                            # git
+```
+
+All four should return a version or path. If any are missing, re-run the bootstrap script.
+
+7. Authorize Chrome Remote Desktop:
+
+   - Open https://remotedesktop.google.com/headless in your browser
+   - Click **"Set up via SSH"** in the left sidebar (should already be selected)
+   - Click **"Begin"**, then **"Next"**
+   - Click **"Authorize"** and sign in with your Google account. ENSURE CORRECT GOOGLE ACCOUNT.
+   - Select **"Debian Linux"** and copy the command it gives you
+   - Paste that command into your VM SSH session and hit Enter
+   - Set a 6-digit PIN when prompted (this is your CRD login PIN)
+   - Verify: go to https://remotedesktop.google.com/access — your VM should appear as online
+
+8. Set up an SSH key for GitHub on the VM:
+
+```bash
+ssh-keygen -t ed25519 -C "nick@cbbanalytics.com" -f ~/.ssh/id_ed25519 -N ""
+cat ~/.ssh/id_ed25519.pub
+```
+
+Copy the output and add it to GitHub: **Account Settings → SSH and GPG keys → New SSH key** (Authentication Key).
+
+9. Clone the repo on the VM:
+
+```bash
+git clone git@github.com:NicholasCanova/cbb-video-annotator.git ~/cbb-video-annotator
 cd ~/cbb-video-annotator
 chmod +x vm-crd-deploy/*.sh
 ```
 
-8. Mount the bucket:
+10. Mount the bucket:
 
 ```bash
 ./vm-crd-deploy/mount-videos.sh
 ```
 
-9. Build the app image from the repo root:
+11. Build the app image from the repo root:
 
 ```bash
 docker build -f vm-crd-deploy/Dockerfile -t cbb-video-annotator .
 ```
 
-10. Connect via CRD, open a terminal, and start the annotator:
+12. Connect to the VM via Chrome Remote Desktop and launch the app:
+
+   - Go to https://remotedesktop.google.com/access
+   - ENSURE you are on the right user - nick@cbbanalytics.com
+   - Click on `cbb-annotator-vm` and enter your PIN
+   - You should see the Xfce desktop. Cancel any "Authenticate" popups (color management — not needed).
+   - Adjust display: click the small blue arrow `>` on the right edge to open the CRD sidebar → **Display** → set resolution to 1920x1080 or higher, enable "Resize to fit"
+   - Open a terminal: right-click the desktop → **Terminal Emulator** (or Applications menu → System → Terminal)
+   - **Important:** the app must be launched from inside this CRD terminal, not from SSH. The CRD session provides the X display.
 
 ```bash
 cd ~/cbb-video-annotator
