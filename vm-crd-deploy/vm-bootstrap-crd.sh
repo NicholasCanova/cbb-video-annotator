@@ -51,10 +51,16 @@ echo "deb [arch=amd64] https://dl.google.com/linux/chrome-remote-desktop/deb sta
 sudo apt-get update
 sudo DEBIAN_FRONTEND=noninteractive apt-get install --assume-yes chrome-remote-desktop
 
-echo "==> Configuring CRD to use Xfce"
+echo "==> Configuring CRD to use Xfce at 1920x1080"
 echo "exec /etc/X11/Xsession /usr/bin/xfce4-session" \
   | sudo tee /etc/chrome-remote-desktop-session >/dev/null
 sudo systemctl disable lightdm.service 2>/dev/null || true
+
+# Set default CRD resolution to 1920x1080
+sudo sed -i 's/^#\?DEFAULT_SIZE_NO_RANDR=.*/DEFAULT_SIZE_NO_RANDR="1920x1080"/' \
+  /etc/chrome-remote-desktop 2>/dev/null || true
+sudo sed -i 's/^DEFAULT_SIZES=.*/DEFAULT_SIZES="1920x1080"/' \
+  /etc/chrome-remote-desktop 2>/dev/null || true
 
 echo "==> Installing gcsfuse"
 export GCSFUSE_REPO="gcsfuse-$(lsb_release -c -s)"

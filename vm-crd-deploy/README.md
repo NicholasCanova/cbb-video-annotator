@@ -15,34 +15,57 @@ This folder contains the files needed to run `cbb-video-annotator` on a Compute 
 
 1. Create the VM using the notes in `vm-instance-details.txt`.
 2. Make sure the VM uses the service account described in `iam-setup.txt`.
-3. SSH into the VM and run:
+3. Copy the bootstrap script from locally to the VM (git is not yet installed on a fresh VM). Run from local terminal inside of cbb-video-annotator:
 
 ```bash
-chmod +x vm-crd-deploy/*.sh
-./vm-crd-deploy/vm-bootstrap-crd.sh
+gcloud compute scp vm-crd-deploy/vm-bootstrap-crd.sh nick@cbb-annotator-vm:~ --zone=us-west1-b --project=cbbanalytics
 ```
 
-4. Complete Chrome Remote Desktop authorization in the browser:
+4. SSH into the VM (typically use the GCP Compute Engine UI):
+
+```bash
+gcloud compute ssh cbb-annotator-vm --zone=us-west1-b --project=cbbanalytics
+```
+
+5. Run the bootstrap.:
+Run from anywhere on the VM. The script uses absolute paths and sudo.
+
+```bash
+chmod +x ~/vm-bootstrap-crd.sh
+~/vm-bootstrap-crd.sh
+newgrp docker
+```
+
+6. Complete Chrome Remote Desktop authorization in the browser:
 
 ```text
-https://remotedesktop.google.com/access
+https://remotedesktop.google.com/headless
 ```
 
-5. Mount the bucket:
+7. Clone the repo on the VM:
+
+```bash
+git clone git@github.com:YOUR_USERNAME/cbb-video-annotator.git ~/cbb-video-annotator
+cd ~/cbb-video-annotator
+chmod +x vm-crd-deploy/*.sh
+```
+
+8. Mount the bucket:
 
 ```bash
 ./vm-crd-deploy/mount-videos.sh
 ```
 
-6. Build the app image from the repo root:
+9. Build the app image from the repo root:
 
 ```bash
 docker build -f vm-crd-deploy/Dockerfile -t cbb-video-annotator .
 ```
 
-7. Start the annotator:
+10. Connect via CRD, open a terminal, and start the annotator:
 
 ```bash
+cd ~/cbb-video-annotator
 TAGGER_NAME=nick ./vm-crd-deploy/run-annotator.sh
 ```
 

@@ -10,12 +10,17 @@ IMAGE_NAME="${IMAGE_NAME:-cbb-video-annotator}"
 VIDEOS_MOUNT="${VIDEOS_MOUNT:-/videos}"
 TAGGER_NAME="${TAGGER_NAME:-nick}"
 
-if [[ ! -S /tmp/.X11-unix/X0 && -z "${DISPLAY:-}" ]]; then
+# CRD typically uses :20; fall back to :0 for local displays
+if [[ -S /tmp/.X11-unix/X20 ]]; then
+  DISPLAY_VALUE="${DISPLAY:-:20}"
+elif [[ -S /tmp/.X11-unix/X0 ]]; then
+  DISPLAY_VALUE="${DISPLAY:-:0}"
+elif [[ -n "${DISPLAY:-}" ]]; then
+  DISPLAY_VALUE="${DISPLAY}"
+else
   echo "No X display detected. Start a CRD session first, then rerun this script."
   exit 1
 fi
-
-DISPLAY_VALUE="${DISPLAY:-:0}"
 
 echo "This script starts the annotator container on the VM's current desktop session."
 echo "Allowing local Docker access to the X server"
@@ -27,5 +32,5 @@ docker run --rm \
   -e TAGGER_NAME="${TAGGER_NAME}" \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
   -v "${HOME}/.Xauthority:/root/.Xauthority:ro" \
-  -v "${VIDEOS_MOUNT}:${VIDEOS_MOUNT}" \
+  --mount type=bind,source="${VIDEOS_MOUNT}",target="${VIDEOS_MOUNT}" \
   "${IMAGE_NAME}"
