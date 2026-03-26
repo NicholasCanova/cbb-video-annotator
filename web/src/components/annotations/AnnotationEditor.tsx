@@ -37,7 +37,9 @@ export function AnnotationEditor({ videoRef: _videoRef }: Props) {
 
   // Keyboard navigation state
   const [activeColumn, setActiveColumn] = useState<ActiveColumn>(0);
-  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  // Per-column highlighted indices so each column remembers its position independently
+  const [highlightedIndices, setHighlightedIndices] = useState<[number, number, number]>([0, 0, 0]);
+  const highlightedIndex = highlightedIndices[activeColumn];
   const noteInputRef = useRef<HTMLInputElement>(null);
   const noteIsFocused = useRef(false);
 
@@ -48,7 +50,6 @@ export function AnnotationEditor({ videoRef: _videoRef }: Props) {
       setSelectedVisibility('');
       setNote('');
       setActiveColumn(0);
-      setHighlightedIndex(0);
 
       if (editingId !== null) {
         const ann = annotations.find((a) => a.id === editingId);
@@ -57,6 +58,21 @@ export function AnnotationEditor({ videoRef: _videoRef }: Props) {
           setSelectedSubtype(ann.subType !== 'None' ? ann.subType : '');
           setSelectedVisibility(ann.visibility || '');
           setNote(ann.note !== 'None' ? ann.note : '');
+
+          // Pre-position all three column highlights on the existing values
+          const labelIdx = config ? config.labels.indexOf(ann.label) : 0;
+          const col2Items = config
+            ? (getSubtypes(config, ann.label).length > 0
+                ? getSubtypes(config, ann.label)
+                : getThirdLevel(config, ann.label))
+            : [];
+          const subtypeIdx = ann.subType !== 'None' ? col2Items.indexOf(ann.subType) : 0;
+          const visIdx = config ? config.visibility.indexOf(ann.visibility || '') : 0;
+          setHighlightedIndices([
+            labelIdx >= 0 ? labelIdx : 0,
+            subtypeIdx >= 0 ? subtypeIdx : 0,
+            visIdx >= 0 ? visIdx : 0,
+          ]);
         }
       } else if (preselect) {
         setSelectedLabel(preselect);
@@ -67,9 +83,10 @@ export function AnnotationEditor({ videoRef: _videoRef }: Props) {
         } else {
           setActiveColumn(2);
         }
-        setHighlightedIndex(0);
+        setHighlightedIndices([0, 0, 0]);
       } else {
         setSelectedLabel('');
+        setHighlightedIndices([0, 0, 0]);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps — intentionally only on modal open
@@ -96,17 +113,17 @@ export function AnnotationEditor({ videoRef: _videoRef }: Props) {
   // --- Click handlers: move highlight only, stay in column. Enter confirms. ---
   const handleLabelClick = (_label: string, index: number) => {
     setActiveColumn(0);
-    setHighlightedIndex(index);
+    setHighlightedIndices(prev => [index, prev[1], prev[2]]);
   };
 
   const handleSubtypeClick = (_sub: string, index: number) => {
     setActiveColumn(1);
-    setHighlightedIndex(index);
+    setHighlightedIndices(prev => [prev[0], index, prev[2]]);
   };
 
   const handleVisibilityClick = (_vis: string, index: number) => {
     setActiveColumn(2);
-    setHighlightedIndex(index);
+    setHighlightedIndices(prev => [prev[0], prev[1], index]);
   };
 
   // --- Enter handler: confirm current column selection and advance ---
@@ -123,12 +140,14 @@ export function AnnotationEditor({ videoRef: _videoRef }: Props) {
       } else {
         setActiveColumn(2);
       }
-      setHighlightedIndex(0);
+      // Reset col 0's index; cols 1 & 2 keep their pre-set values
+      setHighlightedIndices(prev => [0, prev[1], prev[2]]);
     } else if (col === 1) {
       setSelectedSubtype(itemText);
       setSelectedVisibility('');
       setActiveColumn(2);
-      setHighlightedIndex(0);
+      // Reset col 1's index; col 2 keeps its pre-set value
+      setHighlightedIndices(prev => [prev[0], 0, prev[2]]);
     } else if (col === 2) {
       // Final step — save
       setSelectedVisibility(itemText);
@@ -196,10 +215,18 @@ export function AnnotationEditor({ videoRef: _videoRef }: Props) {
 
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setHighlightedIndex((prev) => Math.min(prev + 1, items.length - 1));
+        setHighlightedIndices(prev => {
+          const n = [...prev] as [number, number, number];
+          n[activeColumn] = Math.min(prev[activeColumn] + 1, items.length - 1);
+          return n;
+        });
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setHighlightedIndex((prev) => Math.max(prev - 1, 0));
+        setHighlightedIndices(prev => {
+          const n = [...prev] as [number, number, number];
+          n[activeColumn] = Math.max(prev[activeColumn] - 1, 0);
+          return n;
+        });
       } else if (e.key === 'Enter') {
         e.preventDefault();
         const item = items[highlightedIndex];
@@ -210,7 +237,6 @@ export function AnnotationEditor({ videoRef: _videoRef }: Props) {
         if (activeColumn > 0) {
           e.preventDefault();
           setActiveColumn((prev) => (prev - 1) as ActiveColumn);
-          setHighlightedIndex(0);
         }
       } else if (e.key === 'Escape') {
         closeEditor();
@@ -219,7 +245,7 @@ export function AnnotationEditor({ videoRef: _videoRef }: Props) {
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [show, config, activeColumn, highlightedIndex, getColumnItems, advanceFromColumn, closeEditor]);
+  }, [show, config, activeColumn, highlightedIndex, highlightedIndices, getColumnItems, advanceFromColumn, closeEditor]);
 
   if (!config) return null;
 
