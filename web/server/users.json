@@ -1,0 +1,32 @@
+[
+  {
+    "username": "fjori",
+    "passwordHash": "af5fde16b03ba23694e9c0c8ef888b6ce6ba99d2719e93f0146a9dfcde7d18c9",
+    "allowedGameIds": []
+  },
+  {
+    "username": "angus",
+    "passwordHash": "b30f26880178b2e5ef80a85ae338b3993a0e0401c8bb90a9c87fe007c466861b",
+    "allowedGameIds": []
+  },
+  {
+    "username": "nick",
+    "passwordHash": "78752acf0e7fe385b821503b036857ac8d94bbffb9b6dec2e7b7980f068fbe2a",
+    "allowedGameIds": []
+  },
+  {
+    "username": "raian",
+    "passwordHash": "d9005444224b2cc093a72547a223190d258ad229e4ff9c93f35f8516dd25f321",
+    "allowedGameIds": []
+  },
+  {
+    "username": "mike",
+    "passwordHash": "6321b623abbb2e54287af2b115409d13f783ee37cb4359b4cd6a93081c934818",
+    "allowedGameIds": []
+  },
+  {
+    "username": "demo",
+    "passwordHash": "2a97516c354b68848cdbd8f54a226a0a55b21ed138e207ad6c5cbb9c00aa5aea",
+    "allowedGameIds": []
+  }
+]
