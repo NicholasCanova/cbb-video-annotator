@@ -26,6 +26,24 @@ echo "This script starts the annotator container on the VM's current desktop ses
 echo "Allowing local Docker access to the X server"
 xhost +local:docker
 
+# PulseAudio passthrough for audio in CRD sessions.
+# Mount the host runtime dir and run as host UID/GID so Pulse auth works.
+HOST_UID="$(id -u)"
+HOST_GID="$(id -g)"
+HOST_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/${HOST_UID}}"
+PULSE_ARGS=()
+if [[ -S "${HOST_RUNTIME_DIR}/pulse/native" ]]; then
+  echo "PulseAudio socket found — enabling audio passthrough"
+  PULSE_ARGS=(
+    --user "${HOST_UID}:${HOST_GID}"
+    -e XDG_RUNTIME_DIR="${HOST_RUNTIME_DIR}"
+    -e PULSE_SERVER="unix:${HOST_RUNTIME_DIR}/pulse/native"
+    -v "${HOST_RUNTIME_DIR}:${HOST_RUNTIME_DIR}"
+  )
+else
+  echo "No PulseAudio socket found — audio will not be available"
+fi
+
 echo "Starting ${IMAGE_NAME}"
 docker run --rm \
   -e DISPLAY="${DISPLAY_VALUE}" \
@@ -34,4 +52,5 @@ docker run --rm \
   -v "${HOME}/.Xauthority:/root/.Xauthority:ro" \
   --mount type=bind,source="${VIDEOS_MOUNT}",target="${VIDEOS_MOUNT}" \
   -v "${HOME}:${HOME}:ro" \
+  "${PULSE_ARGS[@]}" \
   "${IMAGE_NAME}"

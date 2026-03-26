@@ -30,6 +30,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgstreamer1.0-0 \
     libgstreamer-plugins-base1.0-0 \
     libpulse-mainloop-glib0 \
+    pulseaudio-utils \
+    gstreamer1.0-pulseaudio \
     fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
