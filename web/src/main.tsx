@@ -1,7 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MantineProvider, ColorSchemeScript } from '@mantine/core';
+import { Notifications } from '@mantine/notifications';
 import '@mantine/core/styles.css';
+import '@mantine/notifications/styles.css';
 import { theme } from './config/defaultTheme';
 import { useUIStore } from './stores/useUIStore';
 import App from './App';
@@ -11,6 +13,7 @@ function Root() {
 
   return (
     <MantineProvider theme={theme} defaultColorScheme={colorScheme} forceColorScheme={colorScheme}>
+      <Notifications position="top-right" />
       <App />
     </MantineProvider>
   );

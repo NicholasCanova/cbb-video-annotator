@@ -77,9 +77,9 @@ export function useHotkeys(actions: HotkeyActions) {
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         e.preventDefault();
         let multiplier = 1;
-        if (e.shiftKey && e.ctrlKey) multiplier = 50;
+        if (e.shiftKey && (e.ctrlKey || e.metaKey)) multiplier = 50;
         else if (e.ctrlKey || e.metaKey) multiplier = 10;
-        else if (e.shiftKey) multiplier = 10;
+        else if (e.shiftKey) multiplier = 5;
 
         const direction = e.key === 'ArrowLeft' ? -1 : 1;
 
